@@ -205,7 +205,7 @@ grestore
     { 3 ge { [ [0.10 70 0.40] [0.30 60 0.44] [0.50 48 0.48] [0.70 34 0.46] [0.90 15 0.40] ] }
            { [ [0.30 60 0.42] [0.55 48 0.46] [0.80 30 0.40] ] } ifelse } ifelse } def
   /kw-tbare 3 def /kw-tbarew 0 def
-  0.37 0.835 P -8 0.31 W mul 4 1 kw-talon
+  0.38 0.815 P -10 0.31 W mul 4 1 kw-talon
   /kw-tjit 0.2 def /kw-tbare 99 def
   /kw-tturn 230 def /kw-tbend 2.4 def /kw-tthick 0.26 def
   /kw-tkids [ [0.35 55 0.42] [0.60 45 0.45] [0.78 30 0.38] ] def
@@ -220,6 +220,7 @@ grestore
 /tanhull [0.93 0.82 0.64] def /pinkhull [0.93 0.74 0.62] def
 % the cave's waves sit behind everything in front of the cave
 Kdroste 0 gt { gsave incave Kdroste 1 sub greatwave grestore } if
+Seed srand                     % the rest is the same drawing whatever Kdroste is
 [0.47 0.262 0.62 0.268 0.80 0.35 1.01 0.50] 4 swell
 [0.62 0.22 0.80 0.30 0.92 0.44 1.01 0.575] 8 swell
 0.553 0.300 0.890 0.472 30 12 9 tanhull boat
@@ -237,7 +238,11 @@ newpath -0.05 0.20 P moveto 0.12 0.28 P 0.28 0.40 P 0.345 0.432 P curveto ink 1 
 [ [0.02 0.17 0.00 -0.10] [0.08 0.16 0.10 -0.10] [0.14 0.15 0.20 -0.10] [0.20 0.14 0.28 -0.10]
   [0.26 0.13 0.34 -0.10] ]
 { aload pop 0.02 -0.03 0.055 0.04 fing } forall
-/claws 4 def /clawlen 0.045 def
+% a pale wash under the hump's foam, as in the print
+pale [ [0.12 0.25 0.05 0.03] [0.20 0.31 0.05 0.035] [0.27 0.37 0.05 0.035] [0.34 0.38 0.05 0.04]
+  [0.41 0.32 0.04 0.04] [0.22 0.22 0.06 0.03] [0.32 0.27 0.06 0.035] ]
+{ aload pop H mul 4 1 roll W mul 4 1 roll H mul 4 1 roll W mul 4 1 roll blob } forall
+/claws 5 def /clawlen 0.05 def
 [ [0.08 0.24 100] [0.12 0.265 98] [0.16 0.29 95] [0.19 0.31 92] [0.22 0.34 90] [0.25 0.37 85]
   [0.28 0.395 80] [0.31 0.415 75] [0.34 0.425 65] [0.37 0.41 50] [0.39 0.39 40] [0.41 0.37 35]
   [0.43 0.34 25] [0.45 0.31 15] [0.46 0.28 10]
@@ -247,5 +252,16 @@ newpath -0.05 0.20 P moveto 0.12 0.28 P 0.28 0.40 P 0.345 0.432 P curveto ink 1 
 [0.36 0.05 0.50 0.215 0.80 0.21 1.01 0.30] 5 swell
 0.41 0.245 0.765 0.090 10 13 9 pinkhull boat
 [0.31 -0.08 0.50 0.05 0.80 0.05 1.01 0.14] 4 swell
+
+% the cartouche, where the print has its title
+/cart { 0.052 0.715 P 0.051 W mul 0.215 H mul } def
+cart 4 copy 0.96 0.93 0.84 setrgbcolor rectfill ink 0.8 setlinewidth rectstroke
+0.056 0.721 P 0.043 W mul 0.203 H mul 0.4 setlinewidth rectstroke
+/Times-Roman findfont 8.5 scalefont setfont
+/vcol { % (string) x -- letters stacked down from the top
+  /vx exch W mul def /vy 0.895 H mul def
+  { 1 string dup 0 4 -1 roll put dup stringwidth pop 2 div vx exch sub vy moveto show
+    /vy vy 10 sub def } forall } def
+(FRACTAL) 0.0895 vcol (WAVE) 0.0665 vcol
 
 showpage

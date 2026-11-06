@@ -25,7 +25,9 @@ print's palette, with no waves in the cave:
 
 ![great_wave](gallery/previews/great_wave.png)
 
-**`gallery/great_wave.ps`** is a quieter homage closer to the woodblock. The
+**`gallery/great_wave.ps`** is the project's first sketch, drawn from memory
+before the scan was measured (`fractal_wave` at `Kpsy=0` is now much closer to
+the woodblock). The
 wave bodies are Bezier shapes with concentric streaks, the foam rims are
 laced with `alongpath` dots, and the crest's claws come from `kw-claw`: a
 tapered, curling finger that sprouts smaller fingers of its own.
