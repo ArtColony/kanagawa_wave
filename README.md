@@ -6,6 +6,8 @@ Images inspired by Katsushika Hokusai's *The Great Wave off Kanagawa*
 
 ![fractal_wave](gallery/previews/fractal_wave.png)
 
+**[See the full gallery](gallery/README.md)** for every piece and its variants.
+
 **`gallery/fractal_wave.ps`** follows the print's own self-similarity and
 pushes it toward the psychedelic. The composition is measured off the
 Met's public-domain scan of the woodblock: the cream back with its thin ink
@@ -71,6 +73,7 @@ Renders go to `renders/` (git-ignored). If disk space is tight, set
 | Path | What |
 |---|---|
 | `gallery/*.ps` | Pieces, one file each: `fractal_wave.ps`, `great_wave.ps` |
+| `gallery/README.md` | [The gallery](gallery/README.md): every piece and its variants, with previews |
 | `gallery/previews/` | Chosen renders, committed by hand |
 | `lib/kw_foam.ps` | `kw-talon`: the recursive foam claw (options `kw-tturn`, `kw-tbend`, `kw-tthick`, `kw-tkids`, `kw-tbare`, colour procs); `kw-finger`: a dark, striped, flecked finger of the wave's face; `kw-bez` |
 | `lib/kw_wave.ps` | Wave procedures: Bezier helpers, `kw-claw`, `kw-crest`, `kw-boat`; load with `(lib/kw_wave.ps) run` from the repo root |
