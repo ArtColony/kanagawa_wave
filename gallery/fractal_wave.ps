@@ -41,9 +41,10 @@ Seed srand
 
 % --------------------------------------------- sky: spiral arms round Fuji
 /fx 0.73 W mul def /fy 0.37 H mul def            % Fuji's peak: the eye
-/skyc [ [0.98 0.90 0.72] [0.99 0.78 0.60] [0.96 0.66 0.62]
-        [0.86 0.62 0.74] [0.70 0.62 0.82] [0.86 0.62 0.74]
-        [0.96 0.66 0.62] [0.99 0.78 0.60] ] def
+/skyc [ [0.99 0.90 0.66] [1.00 0.74 0.50] [0.96 0.52 0.52]
+        [0.84 0.50 0.72] [0.62 0.52 0.84] [0.52 0.78 0.80]
+        [0.70 0.90 0.78] [0.99 0.90 0.66] [1.00 0.74 0.50] [0.96 0.52 0.52]
+        [0.84 0.50 0.72] [0.62 0.52 0.84] ] def
 /arms 24 def /sb 0.45 def                          % spiral tightness
 /sp { % t phi -> x y   r = 6 e^(sb t)
   /phi exch def /tt exch def
@@ -81,6 +82,17 @@ gsave fuji 0.30 0.22 0.45 setrgbcolor fill
   0 2 snow length 2 sub { /k exch def snow k get snow k 1 add get lineto } for
   snow snow length 2 sub get 0.5 H mul lineto closepath
   0.97 0.94 0.84 setrgbcolor fill
+  % ridges fanning from the peak, hue-shifted like the wave's streaks
+  0 1 22 { /i exch def
+    newpath 0.73 0.37 P moveto
+    0.60 i 22 div 0.27 mul add 0.12 P lineto
+    0.60 i 0.5 add 22 div 0.27 mul add 0.12 P lineto closepath
+    0.72 i 0.012 mul add 0.55 0.42 sethsbcolor fill } for
+  % snow again over the ridges' tops, so the snow line stays crisp
+  newpath snow 0 get 0.5 H mul moveto
+  0 2 snow length 2 sub { /k exch def snow k get snow k 1 add get lineto } for
+  snow snow length 2 sub get 0.5 H mul lineto closepath
+  0.97 0.94 0.84 setrgbcolor fill
 grestore
 fuji 0.06 0.08 0.18 setrgbcolor 0.7 setlinewidth stroke
 
@@ -109,12 +121,42 @@ fuji 0.06 0.08 0.18 setrgbcolor 0.7 setlinewidth stroke
   end } def
 % far right wave (mid ground), then the great wave, then the foreground
 0.90 0.20 P 0.30 H mul -40 4 1 curlat
+% Droste: inside the cave, the wave again, smaller and turned
+/kw-fdecay 0.34 def /kw-fturn 390 def /kw-fturnk 0.55 def /kw-fthick 0.66 def
+/kw-fkids [ 0.28 0.05 0.90 { } for ] def
+% each copy sits in the previous one's cave, turned so its foot hides
+% behind the wall it grows from
+/Dx where { pop } { /Dx 0.39 def /Dy 0.53 def /Drot -60 def /Ds 0.25 def } ifelse
+/droste { % level
+  dup 0 gt {
+    gsave Dx W mul Dy H mul translate Drot rotate Ds dup scale
+      0.42 W mul neg 0.45 H mul neg translate        % the main wave's frame
+      dup 1 sub droste                                % deeper copies first
+      0.42 0.45 P 520 -80 4 -1 curlat
+    grestore
+  } if pop } def
+/kw-framp 120 def
+2 droste
+/kw-framp 0 def
 % the great wave: its spiral starts below the page and rises out of the sea
 /kw-fthick 0.66 def /kw-framp 0 def /kw-fturn 390 def /kw-fturnk 0.55 def
 /kw-fdecay 0.34 def
 /kw-fkids [ 0.28 0.025 0.90 { } for ] def
 0.42 0.45 P 520 -80 5 -1 curlat
 /kw-fdecay 0.26 def
+% spray: the crest flings off tiny waves of its own
+/kw-fturn 300 def /kw-fthick 0.5 def /kw-fturnk 0.6 def /kw-fkids [0.35 0.55 0.75] def
+/sea-fcolor /kw-fcolor load def
+/kw-fcolor { pop pop dup 0 eq { pop 0.98 0.96 0.88 setrgbcolor }
+  { 2 mod 1 eq { 0.62 0.80 0.88 } { 0.36 0.52 0.82 } ifelse setrgbcolor } ifelse } def
+0.30 0.40 P 0.40 W mul 0.58 H mul screct
+<< /Mark { /sa exch def /ss exch def /sy exch def /sx exch def
+           sx sy sa 360 mul ss 1 1 kw-curl }
+   /Count 60 /Scale [3 9] /Rotate [0 1] /MinSpacing 18 /Seed rand 100000 mod
+   /Weight { /wy exch def /wx exch def                  % thickest off the curl's lip
+             1 wx 0.58 W mul sub abs W div 3.2 mul sub
+             wy 0.70 H mul sub abs H div 2.2 mul sub 0 max } >> scatter
+/kw-fcolor /sea-fcolor load def
 /kw-fthick 0.55 def /kw-framp 40 def /kw-fturn 330 def /kw-fturnk 0.62 def
 /kw-fkids [0.18 0.24 0.30 0.36 0.42 0.48 0.54 0.60 0.66 0.72 0.78 0.84] def
 0.13 H mul sea                                   % the near sea over its foot
