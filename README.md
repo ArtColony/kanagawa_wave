@@ -18,8 +18,11 @@ children, the foreground wave is the great wave again at half size, and the
 cave holds a smaller great wave, which holds another.
 
 `Kpsy` (0 to 1, default 1) moves every colour from the print's toward a
-hue that turns with finger and recursion depth. At `-D Kpsy=0` it is the
-print's palette, with no waves in the cave:
+hue that turns with finger and recursion depth. `Kfore` (default 1 when
+`Kpsy > 0.3`) makes the foreground the great wave at half size; at 0 it is the
+print's own foreground, a plain cream mound echoing Fuji over a low fan of
+dark fingers and sparse open claws. At `-D Kpsy=0` it is the print's palette
+and foreground, with no waves in the cave:
 
 ![fractal_wave at Kpsy=0](gallery/previews/fractal_wave-print.png)
 

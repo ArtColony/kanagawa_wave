@@ -14,12 +14,16 @@
 %
 % Kpsy (0..1, default 1) pulls every colour from the print's toward one that
 % turns with recursion depth and finger index. Kdroste (default 2 when
-% Kpsy > 0.3, else 0) is how many waves nest in the cave.
+% Kpsy > 0.3, else 0) is how many waves nest in the cave. Kfore (default 1
+% when Kpsy > 0.3, else 0) makes the foreground the great wave at half size;
+% at 0 it is the print's own: a plain cream mound, Fuji's echo, over a
+% low fan of dark fingers and sparse open claws.
 
 /Seed where { pop } { /Seed 11 def } ifelse
 Seed srand
 /Kpsy where { pop } { /Kpsy 1 def } ifelse      % 0 = the print's palette .. 1 = psychedelic
 /Kdroste where { pop } { /Kdroste Kpsy 0.3 gt { 2 } { 0 } ifelse def } ifelse  % waves in the cave
+/Kfore where { pop } { /Kfore Kpsy 0.3 gt { 1 } { 0 } ifelse def } ifelse      % 1: the foreground is the great wave again
 
 % every colour is the print's, pulled toward a depth- or index-shifted hue by Kpsy
 /frac { dup floor sub } bind def
@@ -56,12 +60,12 @@ Seed srand
 /dusk [0.50 0.49 0.46] [0.40 0.28 0.55] Kpsy lerp3 3 array astore def
 0 1 H { /yy exch def /v yy H div def
   v 0.55 ge { light tan v 0.55 sub 0.45 div lerp3 }
-            { dusk light v 0.27 sub 0.28 div 0 max 1 min 0.6 exp lerp3 } ifelse
+            { dusk light v 0.27 sub 0.20 div 0 max 1 min 1.3 exp lerp3 } ifelse
   setrgbcolor 0 yy 1 sub W 2 rectfill } for
 % a pale cloud behind the crest
 /blob { % cx cy rx ry
   gsave 4 2 roll translate scale newpath 0 0 1 0 360 arc fill grestore } def
-0.96 0.93 0.83 setrgbcolor
+[0.95 0.90 0.78] [1.00 0.86 0.76] Kpsy lerp3 setrgbcolor
 [ [0.62 0.80 0.06 0.05] [0.68 0.83 0.05 0.04] [0.72 0.77 0.07 0.05]
   [0.66 0.72 0.08 0.05] [0.78 0.72 0.06 0.04] [0.58 0.70 0.05 0.04]
   [0.20 0.80 0.06 0.025] [0.14 0.79 0.05 0.02] ]
@@ -85,8 +89,9 @@ grestore
   6 dict begin /w exch def /y1 exch def /x1 exch def /y0 exch def /x0 exch def
   /a y1 y0 sub x1 x0 sub atan def /l x1 x0 sub dup mul y1 y0 sub dup mul add sqrt def
   gsave x0 y0 translate a rotate
-  newpath 0 0 moveto l 0.55 mul w l 0.92 mul w l 0 curveto
-  l 0.92 mul w -0.7 mul l 0.55 mul w -0.7 mul 0 0 curveto closepath fill
+  newpath 0 0 moveto l 0.45 mul w l 0.80 mul w l 0.92 mul w curveto
+  l 1.02 mul w l 1.02 mul w -0.6 mul l 0.92 mul w -0.6 mul curveto
+  l 0.80 mul w -0.6 mul l 0.45 mul w -0.6 mul 0 0 curveto closepath fill
   grestore end } def
 /swell { % [x0 y0 x1 y1 x2 y2 x3 y3] rows
   12 dict begin /rows exch def /bz exch def
@@ -99,8 +104,9 @@ grestore
     /t0 rr 0.15 mul def
     { t0 0.97 gt { exit } if
       /t1 t0 0.30 add rr 0.25 mul add 1 min def
-      /dy r 10 mul rr 5 mul add def
-      t0 pt dy sub t1 pt dy sub 2.5 r 0.5 mul add rr 2 mul add dash
+      /dy r 13 mul rr 4 mul add def
+      t1 pt dy sub t0 pt dy sub
+      r 3 mod 1 eq { 3 rr 2 mul add } { 4.5 rr 3.5 mul add } ifelse dash
       /t0 t1 0.03 add rr 0.10 mul add def } loop } for
   newpath 0 pt moveto 1 1 40 { 40 div pt lineto } for ink 0.8 setlinewidth stroke
   end } def
@@ -119,16 +125,17 @@ grestore
     /u exch def l u mul u 1 u sub mul 4 mul sag neg mul } def
   % rowers: huddled dark backs with round heads, over the gunwale
   0 1 nr 1 sub { /i exch def /u 0.64 i 0.30 mul nr div add rr 0.02 mul add def
-    u g bd 0.3 rr mul mul sub /ry exch def /rx exch def
+    u g bd 0.3 rr mul 0.5 add mul sub /ry exch def /rx exch def
     newpath rx bd 0.9 mul sub ry moveto rx bd 1.1 mul sub ry bd 1.5 mul add
       rx bd 0.9 mul add ry bd 1.7 mul add rx bd 1.1 mul add ry curveto
     closepath 0.16 0.30 0.52 setrgbcolor fill
     newpath rx bd 0.3 mul add ry bd 1.25 mul add bd 0.30 mul 0 360 arc
     gsave 0.97 0.88 0.80 setrgbcolor fill grestore ink 0.3 setlinewidth stroke
   } for
-  % hull: gunwale above, a deeper keel curve below
+  % hull: gunwale above, a deep belly below, pointed bow, blunt stern
   newpath 0 g moveto 1 1 20 { 20 div g lineto } for
-  l 0.90 mul sag neg bd 1.4 mul sub l 0.10 mul sag neg bd 1.4 mul sub 0 0 curveto closepath
+  20 -1 0 { 20 div /v exch def                      % the belly: deepest aft of
+    v g v sqrt 1 v 3 exp 0.45 mul sub mul bd 2.2 mul mul sub lineto } for closepath  % centre, blunt stern
   gsave hc aload pop setrgbcolor fill grestore ink 0.6 setlinewidth stroke
   newpath 0.03 g moveto 1 1 20 { 20 div 0.94 mul 0.03 add g bd 0.35 mul sub lineto } for
   0.4 setlinewidth stroke
@@ -181,8 +188,9 @@ grestore
   newpath -0.3 0.60 P moveto -0.01 0.655 P lineto 0.10 0.71 P 0.22 0.86 P 0.38 0.918 P curveto
   0.45 0.90 P 0.50 0.84 P 0.52 0.79 P curveto ink 1.2 setlinewidth stroke
   % the lower fan, across the wave's back, on a dark ground
-  [0.02 0.47 0.20 0.52 0.33 0.53 0.40 0.44 0.47 0.28 0.42 -0.3 -0.3 -0.3 -0.3 0.38] poly
+  [0.02 0.47 0.20 0.52 0.33 0.53 0.40 0.44 0.47 0.28 0.30 0.30 0.20 0.265 0.10 0.265 0.04 0.30 -0.3 0.30 -0.3 0.38] poly
   kw-gdark fill
+  /kw-gstripe [-0.30 0.45] def
   /claws 5 def /clawlen 0.068 def
   [ [-0.02 0.47 0.00 0.0] [0.020 0.505 0.06 0.05] [0.058 0.535 0.14 0.10] [0.098 0.556 0.22 0.20]
     [0.142 0.570 0.28 0.26] [0.187 0.566 0.33 0.28] [0.232 0.576 0.37 0.30]
@@ -196,6 +204,7 @@ grestore
     [0.337 0.815 0.39 0.37] [0.371 0.808 0.41 0.34] [0.403 0.788 0.44 0.32]
     [0.432 0.758 0.45 0.32] [0.458 0.718 0.46 0.31] [0.478 0.672 0.47 0.30] ]
   { aload pop -0.05 0.01 0.058 0.035 fing } forall
+  /kw-gstripe [0.05 0.45] def
   % the crest: one giant claw, made of claws, curling over the cave
   /kw-tturn 120 def /kw-tbend 1.3 def /kw-tthick 0.24 def /kw-tjit 0.35 def
   /kw-tkids { dup 4 ge
@@ -223,9 +232,14 @@ Kdroste 0 gt { gsave incave Kdroste 1 sub greatwave grestore } if
 Seed srand                     % the rest is the same drawing whatever Kdroste is
 [0.47 0.262 0.62 0.268 0.80 0.35 1.01 0.50] 4 swell
 [0.62 0.22 0.80 0.30 0.92 0.44 1.01 0.575] 8 swell
+/claws 3 def /clawlen 0.035 def
+[0.62 0.19 0.70 0.265 0.80 0.315 0.90 0.37 1.01 0.43 1.01 0.15 0.62 0.15] poly kw-gdark fill
+[ [0.735 0.285] [0.79 0.31] [0.845 0.34] [0.90 0.37] [0.955 0.40] ]
+{ aload pop 1 index 0.07 add 1 index 0.07 sub 0.02 -0.02 0.042 0.025 fing } forall
 0.553 0.300 0.890 0.472 30 12 9 tanhull boat
 0 greatwave
 0.03 0.47 0.22 0.33 6 12 5 tanhull boat
+Kfore 0 gt {
 % the foreground wave: the great wave again, smaller
 gsave 0.345 0.42 P translate 0.55 dup scale 0.38 0.918 P neg exch neg exch translate
   0 greatwave grestore
@@ -249,9 +263,37 @@ pale [ [0.12 0.25 0.05 0.03] [0.20 0.31 0.05 0.035] [0.27 0.37 0.05 0.035] [0.34
   [0.14 0.21 85] [0.19 0.235 80] [0.24 0.26 75] [0.29 0.29 65] [0.34 0.32 55] [0.38 0.30 45]
   [0.42 0.27 35] [0.22 0.18 70] [0.28 0.21 60] [0.34 0.24 50] [0.39 0.22 40] [0.31 0.16 55] ]
 { aload pop 0 cluster } forall
-[0.36 0.05 0.50 0.215 0.80 0.21 1.01 0.30] 5 swell
+} {
+% the print's foreground: a plain cream mound, Fuji's echo, rising to (0.335, 0.445)
+newpath -0.05 0.28 P moveto 0.04 0.30 P lineto 0.10 0.265 P 0.20 0.265 P 0.26 0.31 P curveto
+  0.30 0.36 P 0.32 0.42 P 0.335 0.445 P curveto
+  0.36 0.43 P 0.40 0.38 P 0.44 0.33 P curveto 0.48 0.27 P 0.50 0.24 P 0.53 0.20 P curveto
+  0.53 -0.05 P lineto -0.05 -0.05 P lineto closepath cream fill
+% pale washes under the foam
+0.80 0.89 0.90 0.78 0.22 1.0 psy [ [0.05 0.22 0.04 0.02] [0.13 0.235 0.05 0.022] [0.22 0.25 0.045 0.03] [0.17 0.20 0.04 0.02]
+  [0.30 0.24 0.04 0.035] [0.34 0.20 0.04 0.03] [0.41 0.22 0.035 0.035] [0.27 0.30 0.03 0.025]
+  [0.39 0.29 0.025 0.03] ]
+{ aload pop H mul 4 1 roll W mul 4 1 roll H mul 4 1 roll W mul 4 1 roll blob } forall
+% the foreground wave's fan of dark fingers, rising from the bottom edge
+[-0.05 0.10 0.02 0.13 0.05 0.165 0.10 0.175 0.15 0.165 0.20 0.15 0.25 0.13 0.30 0.095
+  0.36 0.065 0.42 0.035 0.48 0.0 0.48 -0.05 -0.05 -0.05] poly kw-gdark fill
+/claws 3 def /clawlen 0.036 def /clawdepth 2 def
+[ [0.03 0.15 0.10 -0.06] [0.075 0.17 0.15 -0.06] [0.12 0.172 0.20 -0.06] [0.165 0.16 0.25 -0.06]
+  [0.21 0.145 0.30 -0.06] [0.255 0.125 0.34 -0.06] [0.30 0.095 0.38 -0.06] [0.35 0.068 0.43 -0.06]
+  [0.40 0.042 0.47 -0.06] ]
+{ aload pop 0.0 -0.02 0.05 0.035 fing } forall
+% sparse open claws on the cream
+/claws 3 def /clawlen 0.035 def /clawdepth 1 def
+[ [0.06 0.205 110] [0.13 0.22 100] [0.19 0.205 95] [0.22 0.245 100] [0.27 0.225 90]
+  [0.25 0.285 95] [0.30 0.31 85] [0.32 0.26 75] [0.36 0.235 60] [0.385 0.29 55]
+  [0.42 0.245 40] [0.445 0.20 30] [0.37 0.18 50] [0.30 0.185 70] [0.10 0.25 105] ]
+{ aload pop 0 cluster } forall
+/clawdepth 2 def
+} ifelse
+Seed 7 add srand               % the rest is the same drawing whatever Kfore is
+[0.36 0.05 0.50 0.215 0.80 0.21 1.01 0.30] 9 swell
 0.41 0.245 0.765 0.090 10 13 9 pinkhull boat
-[0.31 -0.08 0.50 0.05 0.80 0.05 1.01 0.14] 4 swell
+[0.57 -0.05 0.74 0.01 0.90 0.20 1.01 0.36] 8 swell
 
 % the cartouche, where the print has its title
 /cart { 0.052 0.715 P 0.051 W mul 0.215 H mul } def
