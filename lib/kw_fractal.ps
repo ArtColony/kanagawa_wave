@@ -1,0 +1,128 @@
+%!PS-Adobe-3.0
+% kw_fractal.ps -- the Great Wave as a fractal: a curl whose crest sprouts
+% smaller copies of itself, down to the foam.
+%
+%   (lib/kw_fractal.ps) run          from the repo root, after setting options
+%
+% The curl is a tapered band along a logarithmic spiral (r = R e^(-b theta)),
+% split into stripes (the woodblock's streaks). Along its outer edge it grows
+% child curls, each a scaled copy with the same rules, until the size falls
+% under kw-fmin. Children are drawn in the parent's frame, so one call grows
+% the whole self-similar crest.
+%
+% Options (define before loading to override; kw-fdefault keeps them).
+% All are read when kw-curl runs, so a piece may re-def them between calls.
+%   /kw-fturn   deg      how far the spiral winds (400)
+%   /kw-fturnk  real     each level winds kw-fturnk times its parent's turn (1)
+%   /kw-fdecay  real     spiral decay b, per radian (0.30)
+%   /kw-fthick  real     band thickness at the base, fraction of r (0.62)
+%   /kw-framp   deg      thickness grows from 0 over this much of the turn, so
+%                        the band's base has no hard cut (0 = no ramp)
+%   /kw-fstripes int     stripes across the band (7)
+%   /kw-fkids   [fracs]  where along the curl (0..1 of kw-fturn) children grow
+%   /kw-fscale  real     child size / local radius (0.36)
+%   /kw-fprofile proc    frac -> multiplier on kw-fscale along the curl ({pop 1})
+%   /kw-flean   deg      child lean outward from the tangent (35)
+%   /kw-fmin    real     smallest radius that still has children, points (2)
+%   /kw-fcolor  proc     j k depth -> (sets colour) for stripe j of k at depth;
+%                        j 0 is the outer stripe (the foam), k-1 the innermost
+%   /kw-fink    proc     depth -> (sets the outline colour)
+%   /kw-fjit    real     0..1 random variation of child size and lean (0.25)
+%   /kw-fbehind bool     draw children before the band, so only the parts
+%                        that reach past the crest show, as a fringe (false)
+%
+% Procedures:
+%   x y heading R depth sign kw-curl
+%       a curl based at (x,y), first heading `heading`, starting radius R,
+%       recursing `depth` more levels; sign 1 winds anticlockwise, -1 clockwise.
+%   x y heading R kw-curlpath
+%       just the outer spiral edge as a path (for clipping and haloes).
+
+/kw-fdefault { 1 index where { pop pop pop } { def } ifelse } bind def
+
+/kw-fturn 400 kw-fdefault
+/kw-fdecay 0.30 kw-fdefault
+/kw-fthick 0.62 kw-fdefault
+/kw-fstripes 7 kw-fdefault
+/kw-fkids [0.30 0.40 0.50 0.60 0.70 0.80] kw-fdefault
+/kw-fscale 0.36 kw-fdefault
+/kw-flean 35 kw-fdefault
+/kw-fmin 2 kw-fdefault
+/kw-fjit 0.25 kw-fdefault
+/kw-fbehind false kw-fdefault
+/kw-framp 0 kw-fdefault
+/kw-fprofile { pop 1 } kw-fdefault
+/kw-fturnk 1 kw-fdefault
+/kw-fcolor { % j k d -> ; dark body, light streaks, foam on the outer stripe
+  pop pop dup 0 eq { pop 0.96 0.94 0.87 setrgbcolor }
+  { 2 mod 1 eq { 0.10 0.21 0.38 } { 0.55 0.70 0.80 } ifelse setrgbcolor } ifelse
+} kw-fdefault
+/kw-fink { pop 0.07 0.11 0.20 setrgbcolor } kw-fdefault
+
+/kw-fjv { % v -> v * (1 +- kw-fjit)
+  1 kw-fjit rand 2001 mod 1000 sub 1000 div mul add mul } bind def
+
+/kw-curl { % x y heading R depth sign
+  24 dict begin
+  /sg exch def /d exch def /R exch def /h exch def /y exch def /x exch def
+  gsave
+  x y translate h rotate 1 sg scale
+  /Th kw-fturn def /b kw-fdecay def /K kw-fstripes def
+  /n R 1.2 mul cvi 14 max 140 min def
+  /rr { 3.14159265 mul 180 div b mul neg 2.718281828 exch exp R mul } def  % th -> r
+  /pt { /pr exch def /pth exch def                                         % th r -> x y
+        pth sin pr mul R pth cos pr mul sub } def
+  /wf { dup Th div 1 exch sub 0 max 0.75 exp kw-fthick mul                 % th -> frac
+        exch kw-framp 0 gt { kw-framp div 1 min dup dup mul exch 2 mul 3 exch sub mul mul } { pop } ifelse } def
+  /kids {
+  d 0 gt R kw-fmin gt and {
+    kw-fkids { /fr exch def
+      /th fr Th mul def /r th rr def
+      th r pt
+      th 1 add dup rr pt /yb exch def /xb exch def
+      2 copy /ya exch def /xa exch def
+      yb ya sub xb xa sub atan kw-flean kw-fjv sub
+      r kw-fscale mul fr kw-fprofile mul kw-fjv
+      d 1 sub 1 kw-curl
+    } forall
+  } if
+  } def
+  /kw-fturn Th kw-fturnk mul def      % children (and theirs) wind less: hooks, not coils
+  kw-fbehind { kids } if
+  % stripes, j 0 outermost (the foam) to K-1 innermost
+  0 1 K 1 sub { /j exch def
+    /f0 1 j K div sub def /f1 1 j 1 add K div sub def
+    newpath
+    0 1 n { /i exch def /th i n div Th mul def /r th rr def
+      th r 1 th wf 1 f0 sub mul sub mul pt
+      i 0 eq { moveto } { lineto } ifelse } for
+    n -1 0 { /i exch def /th i n div Th mul def /r th rr def
+      th r 1 th wf 1 f1 sub mul sub mul pt lineto } for
+    closepath
+    j K d kw-fcolor fill
+  } for
+  % outline of the outer edge
+  newpath 0 1 n { /i exch def /th i n div Th mul def th th rr pt
+    i 0 eq { moveto } { lineto } ifelse } for
+  d kw-fink R 0.012 mul 0.25 max 1.4 min setlinewidth 1 setlinejoin 1 setlinecap stroke
+  % and a finer one along the inner edge
+  newpath 0 1 n { /i exch def /th i n div Th mul def /r th rr def
+    th r 1 th wf sub mul pt i 0 eq { moveto } { lineto } ifelse } for
+  d kw-fink R 0.006 mul 0.15 max 0.7 min setlinewidth stroke
+  kw-fbehind not { kids } if
+  grestore
+  end
+} bind def
+
+/kw-curlpath { % x y heading R
+  24 dict begin
+  /R exch def /h exch def /y exch def /x exch def
+  /Th kw-fturn def /b kw-fdecay def /n R 1.2 mul cvi 14 max 140 min def
+  matrix currentmatrix
+  x y translate h rotate
+  0 1 n { /i exch def /th i n div Th mul def
+    /r th 3.14159265 mul 180 div b mul neg 2.718281828 exch exp R mul def
+    th sin r mul R th cos r mul sub i 0 eq { moveto } { lineto } ifelse } for
+  setmatrix
+  end
+} bind def

@@ -1,0 +1,125 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 0 0 720 486
+%%Title: fractal_wave -- the Great Wave's self-similarity, pushed until it shimmers
+% Every wave is a kw-curl: a striped log-spiral band whose crest grows
+% smaller copies of itself, down to the foam. The sky winds around Fuji on
+% the same spiral; the sea is seigaiha. Colour turns with recursion depth.
+%
+%   scripts/render.sh gallery/fractal_wave.ps
+%   DPI=216 scripts/render.sh -D Seed=3 gallery/fractal_wave.ps
+
+/Seed where { pop } { /Seed 11 def } ifelse
+Seed srand
+
+/kw-fturn 330 def /kw-fdecay 0.26 def /kw-fthick 0.55 def /kw-fstripes 7 def
+/kw-fkids [0.18 0.24 0.30 0.36 0.42 0.48 0.54 0.60 0.66 0.72 0.78 0.84] def
+/Kscale where { pop } { /Kscale 0.27 def } ifelse    % child size / local radius
+/Klean where { pop } { /Klean 70 def } ifelse        % child lean off the crest
+/Kpeak where { pop } { /Kpeak 0.44 def } ifelse      % where on the curl children are biggest
+/kw-fscale Kscale def /kw-flean Klean def /kw-fmin 1.2 def /kw-fjit 0.22 def
+/kw-fprofile { Kpeak sub 0.25 div dup mul neg 2.718281828 exch exp 0.9 mul 0.1 add } def
+/kw-fbehind false def /kw-fturnk 0.62 def
+(lib/artkit.ps) run
+(lib/kw_fractal.ps) run
+(lib/kw_wave.ps) run
+
+/W 720 def /H 486 def
+/P { H mul exch W mul exch } bind def
+
+% ------------------------------------------------------------- colour
+% hue by depth: Prussian blue at the top level, then violet, teal,
+% magenta, gold and green as the curls get smaller
+/hues [0.30 0.13 0.90 0.47 0.70 0.62] def   % index = depth (0 smallest): green gold magenta teal violet blue
+/kw-fcolor { % j k d
+  /cd exch def /ck exch def /cj exch def
+  cj 0 eq { 0.97 0.94 0.84 setrgbcolor } {
+    hues cd 5 min get cj 0.035 mul add dup floor sub
+    cj 2 mod 1 eq { 0.85 0.30 cd 0.05 mul add } { 0.45 0.80 } ifelse
+    sethsbcolor } ifelse
+} def
+/kw-fink { pop 0.06 0.08 0.18 setrgbcolor } def
+
+% --------------------------------------------- sky: spiral arms round Fuji
+/fx 0.73 W mul def /fy 0.37 H mul def            % Fuji's peak: the eye
+/skyc [ [0.98 0.90 0.72] [0.99 0.78 0.60] [0.96 0.66 0.62]
+        [0.86 0.62 0.74] [0.70 0.62 0.82] [0.86 0.62 0.74]
+        [0.96 0.66 0.62] [0.99 0.78 0.60] ] def
+/arms 24 def /sb 0.45 def                          % spiral tightness
+/sp { % t phi -> x y   r = 6 e^(sb t)
+  /phi exch def /tt exch def
+  /rad 6 2.718281828 sb tt mul 3.14159265 mul 180 div exp mul def
+  fx tt phi add cos rad mul add fy tt phi add sin rad mul add } def
+0 1 arms 1 sub { /a exch def
+  /p0 a 360 arms div mul def /p1 a 1 add 360 arms div mul def
+  newpath fx fy moveto
+  0 5 720 { p0 sp lineto } for
+  720 -5 0 { p1 sp lineto } for
+  closepath
+  skyc a skyc length mod get aload pop setrgbcolor fill
+} for
+% sun rings behind the peak
+0 1 9 { /i exch def
+  newpath fx fy 70 i 7 mul sub 0 360 arc
+  i 2 mod 0 eq { 0.99 0.85 0.45 } { 0.98 0.55 0.40 } ifelse setrgbcolor fill } for
+
+% ---------------------------------------------------------------- Fuji
+/fuji { newpath 0.61 0.17 P moveto
+  0.67 0.20 P 0.705 0.33 P 0.722 0.37 P curveto 0.738 0.37 P lineto
+  0.755 0.33 P 0.79 0.20 P 0.85 0.17 P curveto closepath } def
+gsave fuji 0.30 0.22 0.45 setrgbcolor fill
+  fuji clip
+  % snow line: midpoint displacement, a fractal edge
+  /snow [ 0.68 W mul 0.30 H mul 0.78 W mul 0.30 H mul ] def
+  5 { /nw [ 0 2 snow length 4 sub { /k exch def
+          snow k get snow k 1 add get
+          snow k get snow k 2 add get add 2 div
+          snow k 1 add get snow k 3 add get add 2 div
+          snow k 2 add get snow k get sub abs 0.35 mul jit add } for
+        snow snow length 2 sub get snow snow length 1 sub get ] def
+      /snow nw def } repeat
+  newpath snow 0 get 0.5 H mul moveto
+  0 2 snow length 2 sub { /k exch def snow k get snow k 1 add get lineto } for
+  snow snow length 2 sub get 0.5 H mul lineto closepath
+  0.97 0.94 0.84 setrgbcolor fill
+grestore
+fuji 0.06 0.08 0.18 setrgbcolor 0.7 setlinewidth stroke
+
+% ------------------------------------------------------ sea: seigaiha rows
+/seig { % x y r
+  /sr exch def /sy exch def /sx exch def
+  0 1 5 { /i exch def
+    newpath sx sy sr 1 i 6 div sub mul 0 180 arc closepath
+    i 2 mod 0 eq { 0.97 0.94 0.84 setrgbcolor }
+    { 0.50 i 0.03 mul add sy H div 1.6 mul add sx W div 0.12 mul add dup floor sub 0.70 0.62 sethsbcolor } ifelse fill
+  } for } def
+/sea { % ytop -- rows from ytop down, small and far to big and near
+  /sy exch def /sr 9 0.19 H mul sy sub 9 0.55 mul div 1.06 exch exp mul def
+  { sy -12 lt { exit } if
+    /off sy H div 70 mul cvi 2 mod sr mul def
+    off neg sr 2 mul W sr add { sy sr seig } for
+    /sy sy sr 0.55 mul sub def /sr sr 1.06 mul def } loop } def
+0.19 H mul sea
+
+% ---------------------------------------------------------------- waves
+% each curl is placed by its spiral centre: cx cy R phi depth sign, where
+% phi is the angle from the centre to the base (kept off the page)
+/curlat { 8 dict begin
+  /sg exch def /dp exch def /phi exch def /R exch def /cy exch def /cx exch def
+  cx phi cos R mul add cy phi sin R mul add phi 90 sg mul add R dp sg kw-curl
+  end } def
+% far right wave (mid ground), then the great wave, then the foreground
+0.90 0.20 P 0.30 H mul -40 4 1 curlat
+% the great wave: its spiral starts below the page and rises out of the sea
+/kw-fthick 0.66 def /kw-framp 0 def /kw-fturn 390 def /kw-fturnk 0.55 def
+/kw-fdecay 0.34 def
+/kw-fkids [ 0.28 0.025 0.90 { } for ] def
+0.42 0.45 P 520 -80 5 -1 curlat
+/kw-fdecay 0.26 def
+/kw-fthick 0.55 def /kw-framp 40 def /kw-fturn 330 def /kw-fturnk 0.62 def
+/kw-fkids [0.18 0.24 0.30 0.36 0.42 0.48 0.54 0.60 0.66 0.72 0.78 0.84] def
+0.13 H mul sea                                   % the near sea over its foot
+0.40 0.21 P 0.58 0.14 P 8 8 kw-boat
+0.22 0.12 P 95 -120 4 -1 curlat
+0.30 0.06 P 0.50 0.12 P 8 7 kw-boat
+
+showpage
