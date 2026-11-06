@@ -1,0 +1,187 @@
+%!PS-Adobe-3.0
+% kw_foam.ps -- Hokusai's foam claw, as a fractal: a white finger, inked on
+% its back, that bends over into a hooked talon and sprouts smaller claws
+% along its back, which sprout their own.
+%
+%   (lib/kw_foam.ps) run          from the repo root, after setting options
+%
+% Options (define before loading to override; kw-tdefault keeps them). All
+% are read when kw-talon runs, so a piece may re-def them between calls.
+%   /kw-tturn   deg     how far the finger bends, base to tip (200)
+%   /kw-tbend   real    >1 bends late, so the tip hooks (1.8)
+%   /kw-tthick  real    width at the base, fraction of length (0.34)
+%   /kw-tkids   [[t lean scale] ...]
+%                       children: at t (0..1 along the back), leaning `lean`
+%                       degrees outward from the tangent, `scale` x the length
+%                       or a proc depth -> that array, so levels may differ
+%   /kw-tmin    real    shortest finger that still has children, points (3)
+%   /kw-tjit    real    0..1 random variation of child lean and size (0.2)
+%   /kw-tink    real    ink width on the back, fraction of length (0.045)
+%   /kw-tfoam   proc    depth -> (sets the finger's colour)
+%   /kw-tshade  proc    depth -> (sets the colour of the hollow under the hook)
+%   /kw-tinkc   proc    depth -> (sets the ink colour)
+%   /kw-tbare   int     levels at this depth or more are only a skeleton:
+%                       a plain foam body, no ink, carrying their children,
+%                       so a big claw reads as a cluster of small ones (99)
+%   /kw-tbarew  real    a skeleton level's width, times its usual width; 0 draws
+%                       nothing, so only its children show (0.5)
+%
+% Procedures:
+%   x y heading len depth sign kw-talon
+%       a claw based at (x,y), first heading `heading`, length `len`,
+%       recursing `depth` more levels; sign 1 bends clockwise (to the right
+%       of travel), -1 anticlockwise.
+
+/kw-tdefault { 1 index where { pop pop pop } { def } ifelse } bind def
+
+/kw-tturn 230 kw-tdefault
+/kw-tbend 2.4 kw-tdefault
+/kw-tthick 0.26 kw-tdefault
+/kw-tkids [ [0.35 55 0.42] [0.60 45 0.45] [0.78 30 0.38] ] kw-tdefault
+/kw-tmin 3 kw-tdefault
+/kw-tjit 0.2 kw-tdefault
+/kw-tink 0.032 kw-tdefault
+/kw-tfoam { pop 0.97 0.95 0.88 setrgbcolor } kw-tdefault
+/kw-tshade { pop 0.70 0.83 0.87 setrgbcolor } kw-tdefault
+/kw-tinkc { pop 0.11 0.19 0.34 setrgbcolor } kw-tdefault
+/kw-tbare 99 kw-tdefault
+/kw-tbarew 0.5 kw-tdefault
+
+/kw-tjv { % v -> v * (1 +- kw-tjit)
+  1 kw-tjit rand 2001 mod 1000 sub 1000 div mul add mul } bind def
+
+/kw-talon { % x y heading len depth sign
+  40 dict begin
+  /sg exch def /d exch def /L exch def /h exch def /y exch def /x exch def
+  gsave
+  x y translate h rotate 1 sg scale              % +y is the convex (back) side
+  /n L 0.8 mul cvi 10 max 60 min def
+  /Tn kw-tturn def /Bn kw-tbend def /Wn kw-tthick L mul d kw-tbare ge { kw-tbarew mul } if def
+  % walk the spine once: xs ys (centre), ang (tangent), w (half width)
+  /xs n 1 add array def /ys n 1 add array def /as n 1 add array def /ws n 1 add array def
+  /cx 0 def /cy 0 def
+  0 1 n { /i exch def /t i n div def
+    /a t Bn exp Tn mul neg def                        % bends towards -y
+    /w 1 t sub 1.0 exp Wn mul 0.5 mul
+       t 0.12 div 1 min sqrt 0.35 mul 0.65 add mul def % a rounded base
+    xs i cx put ys i cy put as i a put ws i w put
+    /cx cx a cos L n div mul add def /cy cy a sin L n div mul add def
+  } for
+  /bk { % i -> x y on the back (convex) edge
+    /k exch def xs k get as k get 90 add cos ws k get mul add
+                ys k get as k get 90 add sin ws k get mul add } def
+  /fr { % i f -> x y between centre (f 0) and the belly (f 1)
+    /ff exch def /k exch def
+    xs k get as k get 90 sub cos ws k get ff mul mul add
+    ys k get as k get 90 sub sin ws k get ff mul mul add } def
+  d kw-tbare ge {
+    kw-tbarew 0 gt {
+      newpath 0 bk moveto 1 1 n { bk lineto } for
+      n -1 0 { 1 fr lineto } for closepath d kw-tfoam fill } if
+  } {
+  % hollow under the hook: a pale wash just inside the curl, behind the finger
+  /s0 n 0.3 mul cvi def
+  newpath s0 0.5 fr moveto s0 1 add 1 n { 0.5 fr lineto } for
+  n -1 s0 { /k exch def k 1 k n div sub 6 mul sin abs 1.4 mul 1.6 add fr lineto } for
+  closepath d kw-tshade fill
+  % the finger
+  newpath 0 bk moveto 1 1 n { bk lineto } for
+  n -1 0 { 1 fr lineto } for closepath
+  d kw-tfoam fill
+  % ink: heavy on the back, tapering into the tip; light on the belly
+  d kw-tinkc 1 setlinecap 1 setlinejoin
+  0 1 n 1 sub { /i exch def
+    newpath i bk moveto i 1 add bk lineto
+    1 i n div sub 0.5 exp 0.35 max kw-tink L mul mul 0.2 max setlinewidth stroke } for
+  newpath n 5 idiv 1 fr moveto n 5 idiv 1 add 1 n { 1 fr lineto } for
+  kw-tink L mul 0.5 mul 0.15 max setlinewidth stroke
+  } ifelse
+  % children grow off the back, leaning outward
+  d 0 gt L kw-tmin gt and {
+    /kw-tkids load dup xcheck { d exch exec } if { aload pop /cs exch def /cl exch def /ct exch def
+      /k ct n mul cvi n min def
+      k bk as k get cl kw-tjv add L cs mul kw-tjv d 1 sub 1 kw-talon
+    } forall
+  } if
+  grestore
+  end
+} bind def
+
+% ------------------------------------------------------------------ fingers
+% The wave's face is a fan of dark fingers, each with a rounded head (where
+% the claws grow), a mid-blue stripe down its length and white flecks.
+%
+% Options (read at call time):
+%   /kw-gdark   proc    -> (sets the finger's dark colour)
+%   /kw-gmid    proc    -> (sets the stripe colour)
+%   /kw-gfleck  proc    -> (sets the fleck colour)
+%   /kw-gflecks real    flecks per square point of finger (0.012)
+%   /kw-gstripe [f0 f1] the stripe's place across the finger, -1 left edge
+%                       to 1 right edge as seen from head to foot ([0.15 0.6])
+%
+%   hx hy c1x c1y c2x c2y fx fy w0 w1 kw-finger
+%       a finger whose centre runs along the Bezier from the head (hx,hy) to
+%       the foot (fx,fy), w0 wide at the head, w1 at the foot.
+%   x0 y0 x1 y1 x2 y2 x3 y3 t kw-bez -> x y      a point on a cubic Bezier
+
+/kw-gdark { 0.11 0.19 0.34 setrgbcolor } kw-tdefault
+/kw-gmid { 0.17 0.39 0.60 setrgbcolor } kw-tdefault
+/kw-gfleck { 0.97 0.95 0.88 setrgbcolor } kw-tdefault
+/kw-gflecks 0.012 kw-tdefault
+/kw-gstripe [0.05 0.45] kw-tdefault
+
+/kw-bez { % x0 y0 x1 y1 x2 y2 x3 y3 t -> x y
+  12 dict begin
+  /t exch def /y3 exch def /x3 exch def /y2 exch def /x2 exch def
+  /y1 exch def /x1 exch def /y0 exch def /x0 exch def /u 1 t sub def
+  /b0 u u mul u mul def /b1 3 u mul u mul t mul def
+  /b2 3 u mul t mul t mul def /b3 t t mul t mul def
+  x0 b0 mul x1 b1 mul add x2 b2 mul add x3 b3 mul add
+  y0 b0 mul y1 b1 mul add y2 b2 mul add y3 b3 mul add
+  end } bind def
+
+/kw-finger { % hx hy c1x c1y c2x c2y fx fy w0 w1
+  40 dict begin
+  /w1 exch def /w0 exch def 8 array astore /bz exch def
+  /n 40 def
+  /xs n 1 add array def /ys n 1 add array def /as n 1 add array def /ws n 1 add array def
+  0 1 n { /i exch def /t i n div def
+    bz aload pop t kw-bez /py exch def /px exch def
+    bz aload pop t 0.002 add 1 min kw-bez /yb exch def /xb exch def
+    bz aload pop t 0.002 sub 0 max kw-bez /ya exch def /xa exch def
+    /a yb ya sub xb xa sub atan def                          % direction head -> foot
+    xs i px put ys i py put as i a put
+    ws i w0 1 t sub mul w1 t mul add 0.5 mul put } for
+  /side { % i f -> x y   f -1 left edge .. 1 right edge (head to foot)
+    /f exch def /k exch def
+    xs k get as k get 90 sub cos ws k get f mul mul add
+    ys k get as k get 90 sub sin ws k get f mul mul add } def
+  /body { % f0 f1 i0 -> path
+    /i0 exch def /g1 exch def /g0 exch def
+    newpath i0 g0 side moveto i0 1 add 1 n { g0 side lineto } for
+    n -1 i0 { g1 side lineto } for closepath } def
+  % dark body with a rounded head
+  -1 1 0 body
+  xs 0 get ys 0 get ws 0 get as 0 get 90 add dup 180 add arc
+  kw-gdark fill
+  % mid-blue stripe, starting a little below the head
+  kw-gstripe aload pop n 8 idiv body kw-gmid fill
+  % flecks
+  kw-gfleck
+  w0 w1 add 0.5 mul
+  0 1 n 1 sub { /i exch def xs i 1 add get xs i get sub dup mul
+    ys i 1 add get ys i get sub dup mul add sqrt add } for
+  /len exch def
+  len w0 w1 add 0.5 mul mul kw-gflecks mul cvi {
+    /k rand n 1 sub mod 1 add def
+    /f rand 1000 mod 1000 div 1.7 mul 0.85 sub def
+    f kw-gstripe 0 get 0.1 sub gt f kw-gstripe 1 get 0.1 add lt and not {
+      k f side /fy exch def /fx exch def
+      /fs ws k get 0.10 mul rand 1000 mod 1000 div 0.6 mul 0.7 add mul def
+      newpath /first true def
+      0 72 288 { rand 30 mod add /an exch def
+        fx an cos fs mul add fy an sin fs mul add
+        first { moveto /first false def } { lineto } ifelse } for closepath fill
+    } if
+  } repeat
+  end } bind def

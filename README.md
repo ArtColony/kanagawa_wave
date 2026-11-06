@@ -6,14 +6,22 @@ Images inspired by Katsushika Hokusai's *The Great Wave off Kanagawa*
 
 ![fractal_wave](gallery/previews/fractal_wave.png)
 
-**`gallery/fractal_wave.ps`** follows the print's self-similarity until it
-turns psychedelic. Every wave is one `kw-curl` (`lib/kw_fractal.ps`): a
-striped band along a logarithmic spiral whose crest grows smaller copies of
-itself. Each level winds less than its parent, so the copies read as
-hooks, and the hue turns with depth (Prussian blue, then violet, teal,
-magenta, gold). The great wave's cave holds a smaller copy of the wave,
-and that copy holds another (a Droste recursion). The spray is tiny curls,
-the sky winds round Fuji on the same spiral, and the sea is seigaiha.
+**`gallery/fractal_wave.ps`** follows the print's own self-similarity and
+pushes it toward the psychedelic. The composition is measured off the
+Met's public-domain scan of the woodblock: the cream back with its thin ink
+outline, the face as a fan of dark fingers flecked with white, Fuji small in
+the trough under a grey band of sky, the long swells and the three boats.
+The fractal is Hokusai's claw (`kw-talon` in `lib/kw_foam.ps`): a white
+finger that hooks at the tip and sprouts smaller claws along its back, which
+sprout their own. The crest is one giant claw drawn only through its
+children, the foreground wave is the great wave again at half size, and the
+cave holds a smaller great wave, which holds another.
+
+`Kpsy` (0 to 1, default 1) moves every colour from the print's toward a
+hue that turns with finger and recursion depth. At `-D Kpsy=0` it is the
+print's palette, with no waves in the cave:
+
+![fractal_wave at Kpsy=0](gallery/previews/fractal_wave-print.png)
 
 ![great_wave](gallery/previews/great_wave.png)
 
@@ -45,7 +53,7 @@ pscat --version
 ```sh
 scripts/render.sh                                  # every gallery piece -> renders/
 scripts/render.sh -D Seed=4 gallery/great_wave.ps  # another seed
-scripts/render.sh -D Kscale=0.4 gallery/fractal_wave.ps  # bigger crest curls
+scripts/render.sh -D Kpsy=0 gallery/fractal_wave.ps    # the print's palette
 DPI=144 scripts/render.sh gallery/great_wave.ps    # 2x
 scripts/render.sh --sweep-seed 1:9 gallery/great_wave.ps   # contact sheet
 ```
@@ -59,7 +67,7 @@ Renders go to `renders/` (git-ignored). If disk space is tight, set
 |---|---|
 | `gallery/*.ps` | Pieces, one file each: `fractal_wave.ps`, `great_wave.ps` |
 | `gallery/previews/` | Chosen renders, committed by hand |
-| `lib/kw_fractal.ps` | `kw-curl`: the recursive log-spiral wave, with its options (`kw-fturn`, `kw-fturnk`, `kw-fkids`, `kw-fscale`, `kw-fprofile`, `kw-fbehind`, `kw-framp`, `kw-fcolor`) |
+| `lib/kw_foam.ps` | `kw-talon`: the recursive foam claw (options `kw-tturn`, `kw-tbend`, `kw-tthick`, `kw-tkids`, `kw-tbare`, colour procs); `kw-finger`: a dark, striped, flecked finger of the wave's face; `kw-bez` |
 | `lib/kw_wave.ps` | Wave procedures: Bezier helpers, `kw-claw`, `kw-crest`, `kw-boat`; load with `(lib/kw_wave.ps) run` from the repo root |
 | `scripts/render.sh` | Render with strict lint and timing; `-D Name=value`, `--sweep-seed` |
 | `docs/pscat-issues.md` | pscat bugs and requests found here, each filed upstream |

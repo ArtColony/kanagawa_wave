@@ -1,167 +1,251 @@
 %!PS-Adobe-3.0
-%%BoundingBox: 0 0 720 486
-%%Title: fractal_wave -- the Great Wave's self-similarity, pushed until it shimmers
-% Every wave is a kw-curl: a striped log-spiral band whose crest grows
-% smaller copies of itself, down to the foam. The sky winds around Fuji on
-% the same spiral; the sea is seigaiha. Colour turns with recursion depth.
+%%BoundingBox: 0 0 720 484
+%%Title: fractal_wave -- the Great Wave's own self-similarity, followed down
+% Laid out on Hokusai's print (measured off the Met's public-domain scan):
+% the wave's face is a fan of dark fingers whose heads burst into claws,
+% each claw sprouts claws (kw-talon), the crest is one giant claw made of
+% claws, the foreground wave is the great wave again, smaller, and the
+% cave holds another great wave, which holds another.
 %
 %   scripts/render.sh gallery/fractal_wave.ps
+%   scripts/render.sh -D Kpsy=0 gallery/fractal_wave.ps    # the print's palette
+%   scripts/render.sh -D Kpsy=0.5 -D Kdroste=0 gallery/fractal_wave.ps
 %   DPI=216 scripts/render.sh -D Seed=3 gallery/fractal_wave.ps
+%
+% Kpsy (0..1, default 1) pulls every colour from the print's toward one that
+% turns with recursion depth and finger index. Kdroste (default 2 when
+% Kpsy > 0.3, else 0) is how many waves nest in the cave.
 
 /Seed where { pop } { /Seed 11 def } ifelse
 Seed srand
+/Kpsy where { pop } { /Kpsy 1 def } ifelse      % 0 = the print's palette .. 1 = psychedelic
+/Kdroste where { pop } { /Kdroste Kpsy 0.3 gt { 2 } { 0 } ifelse def } ifelse  % waves in the cave
 
-/kw-fturn 330 def /kw-fdecay 0.26 def /kw-fthick 0.55 def /kw-fstripes 7 def
-/kw-fkids [0.18 0.24 0.30 0.36 0.42 0.48 0.54 0.60 0.66 0.72 0.78 0.84] def
-/Kscale where { pop } { /Kscale 0.27 def } ifelse    % child size / local radius
-/Klean where { pop } { /Klean 70 def } ifelse        % child lean off the crest
-/Kpeak where { pop } { /Kpeak 0.44 def } ifelse      % where on the curl children are biggest
-/kw-fscale Kscale def /kw-flean Klean def /kw-fmin 1.2 def /kw-fjit 0.22 def
-/kw-fprofile { Kpeak sub 0.25 div dup mul neg 2.718281828 exch exp 0.9 mul 0.1 add } def
-/kw-fbehind false def /kw-fturnk 0.62 def
+% every colour is the print's, pulled toward a depth- or index-shifted hue by Kpsy
+/frac { dup floor sub } bind def
+/psy { % r g b h s v -> (sets the mix)
+  7 dict begin gsave sethsbcolor currentrgbcolor grestore
+  /pb exch def /pg exch def /pp exch def /b0 exch def /g0 exch def /r0 exch def
+  r0 1 Kpsy sub mul pp Kpsy mul add g0 1 Kpsy sub mul pg Kpsy mul add
+  b0 1 Kpsy sub mul pb Kpsy mul add setrgbcolor end } bind def
+/fi 0 def                                       % finger counter: each finger its own hue
+/fhue { fi 0.382 mul frac 0.36 mul 0.58 add } def    % indigo .. violet .. magenta
+/stripes [ [0.30 0.90 0.95] [0.98 0.80 0.30] [1.00 0.55 0.80] [0.55 0.98 0.80] [0.80 0.70 1.00] ] def
+/kw-gdark { 0.11 0.19 0.34 fhue 0.85 0.42 psy } def
+/kw-gmid { 7 dict begin
+  stripes fi stripes length mod get aload pop gsave setrgbcolor currentrgbcolor currenthsbcolor grestore
+  /v exch def /sa exch def /hu exch def pop pop pop 0.17 0.39 0.60 hu sa v psy end } def
+/kw-tfoam { 0.97 0.95 0.88 4 -1 roll 0.21 mul 0.40 add frac 0.07 1.0 psy } def
+/kw-tshade { 0.70 0.83 0.87 4 -1 roll 0.17 mul 0.45 add frac 0.60 1.0 psy } def
+/kw-tinkc { pop 0.11 0.19 0.34 0.78 0.9 0.32 psy } def
 (lib/artkit.ps) run
-(lib/kw_fractal.ps) run
-(lib/kw_wave.ps) run
+(lib/kw_foam.ps) run
 
-/W 720 def /H 486 def
-/P { H mul exch W mul exch } bind def
+/W 720 def /H 484 def
+/P { H mul exch W mul exch } bind def          % normalized -> points
+/ink { 0.11 0.19 0.34 setrgbcolor } def
+/cream { 0.97 0.95 0.88 setrgbcolor } def
+/rr { rand 10000 mod 10000 div } def           % 0..1
 
-% ------------------------------------------------------------- colour
-% hue by depth: Prussian blue at the top level, then violet, teal,
-% magenta, gold and green as the curls get smaller
-/hues [0.30 0.13 0.90 0.47 0.70 0.62] def   % index = depth (0 smallest): green gold magenta teal violet blue
-/kw-fcolor { % j k d
-  /cd exch def /ck exch def /cj exch def
-  cj 0 eq { 0.97 0.94 0.84 setrgbcolor } {
-    hues cd 5 min get cj 0.035 mul add dup floor sub
-    cj 2 mod 1 eq { 0.85 0.30 cd 0.05 mul add } { 0.45 0.80 } ifelse
-    sethsbcolor } ifelse
-} def
-/kw-fink { pop 0.06 0.08 0.18 setrgbcolor } def
+% ------------------------------------------------------------------ sky
+/lerp3 { % [a] [b] t -> r g b
+  /t exch def /cb exch def /ca exch def
+  0 1 2 { /i exch def ca i get 1 t sub mul cb i get t mul add } for } def
+/tan [0.94 0.86 0.70] [0.99 0.78 0.62] Kpsy lerp3 3 array astore def
+/light [0.95 0.91 0.80] [0.98 0.90 0.82] Kpsy lerp3 3 array astore def
+/dusk [0.50 0.49 0.46] [0.40 0.28 0.55] Kpsy lerp3 3 array astore def
+0 1 H { /yy exch def /v yy H div def
+  v 0.55 ge { light tan v 0.55 sub 0.45 div lerp3 }
+            { dusk light v 0.27 sub 0.28 div 0 max 1 min 0.6 exp lerp3 } ifelse
+  setrgbcolor 0 yy 1 sub W 2 rectfill } for
+% a pale cloud behind the crest
+/blob { % cx cy rx ry
+  gsave 4 2 roll translate scale newpath 0 0 1 0 360 arc fill grestore } def
+0.96 0.93 0.83 setrgbcolor
+[ [0.62 0.80 0.06 0.05] [0.68 0.83 0.05 0.04] [0.72 0.77 0.07 0.05]
+  [0.66 0.72 0.08 0.05] [0.78 0.72 0.06 0.04] [0.58 0.70 0.05 0.04]
+  [0.20 0.80 0.06 0.025] [0.14 0.79 0.05 0.02] ]
+{ aload pop H mul 4 1 roll W mul 4 1 roll H mul 4 1 roll W mul 4 1 roll blob } forall
 
-% --------------------------------------------- sky: spiral arms round Fuji
-/fx 0.73 W mul def /fy 0.37 H mul def            % Fuji's peak: the eye
-/skyc [ [0.99 0.90 0.66] [1.00 0.74 0.50] [0.96 0.52 0.52]
-        [0.84 0.50 0.72] [0.62 0.52 0.84] [0.52 0.78 0.80]
-        [0.70 0.90 0.78] [0.99 0.90 0.66] [1.00 0.74 0.50] [0.96 0.52 0.52]
-        [0.84 0.50 0.72] [0.62 0.52 0.84] ] def
-/arms 24 def /sb 0.45 def                          % spiral tightness
-/sp { % t phi -> x y   r = 6 e^(sb t)
-  /phi exch def /tt exch def
-  /rad 6 2.718281828 sb tt mul 3.14159265 mul 180 div exp mul def
-  fx tt phi add cos rad mul add fy tt phi add sin rad mul add } def
-0 1 arms 1 sub { /a exch def
-  /p0 a 360 arms div mul def /p1 a 1 add 360 arms div mul def
-  newpath fx fy moveto
-  0 5 720 { p0 sp lineto } for
-  720 -5 0 { p1 sp lineto } for
-  closepath
-  skyc a skyc length mod get aload pop setrgbcolor fill
-} for
-% sun rings behind the peak
-0 1 9 { /i exch def
-  newpath fx fy 70 i 7 mul sub 0 360 arc
-  i 2 mod 0 eq { 0.99 0.85 0.45 } { 0.98 0.55 0.40 } ifelse setrgbcolor fill } for
-
-% ---------------------------------------------------------------- Fuji
-/fuji { newpath 0.61 0.17 P moveto
-  0.67 0.20 P 0.705 0.33 P 0.722 0.37 P curveto 0.738 0.37 P lineto
-  0.755 0.33 P 0.79 0.20 P 0.85 0.17 P curveto closepath } def
-gsave fuji 0.30 0.22 0.45 setrgbcolor fill
-  fuji clip
-  % snow line: midpoint displacement, a fractal edge
-  /snow [ 0.68 W mul 0.30 H mul 0.78 W mul 0.30 H mul ] def
-  5 { /nw [ 0 2 snow length 4 sub { /k exch def
-          snow k get snow k 1 add get
-          snow k get snow k 2 add get add 2 div
-          snow k 1 add get snow k 3 add get add 2 div
-          snow k 2 add get snow k get sub abs 0.35 mul jit add } for
-        snow snow length 2 sub get snow snow length 1 sub get ] def
-      /snow nw def } repeat
-  newpath snow 0 get 0.5 H mul moveto
-  0 2 snow length 2 sub { /k exch def snow k get snow k 1 add get lineto } for
-  snow snow length 2 sub get 0.5 H mul lineto closepath
-  0.97 0.94 0.84 setrgbcolor fill
-  % ridges fanning from the peak, hue-shifted like the wave's streaks
-  0 1 22 { /i exch def
-    newpath 0.73 0.37 P moveto
-    0.60 i 22 div 0.27 mul add 0.12 P lineto
-    0.60 i 0.5 add 22 div 0.27 mul add 0.12 P lineto closepath
-    0.72 i 0.012 mul add 0.55 0.42 sethsbcolor fill } for
-  % snow again over the ridges' tops, so the snow line stays crisp
-  newpath snow 0 get 0.5 H mul moveto
-  0 2 snow length 2 sub { /k exch def snow k get snow k 1 add get lineto } for
-  snow snow length 2 sub get 0.5 H mul lineto closepath
-  0.97 0.94 0.84 setrgbcolor fill
+% ------------------------------------------------------------------ Fuji
+/fuji { newpath 0.540 0.262 P moveto 0.600 0.318 P 0.622 0.350 P 0.632 0.357 P curveto
+  0.642 0.350 P 0.664 0.318 P 0.720 0.262 P curveto closepath } def
+fuji 0.15 0.24 0.40 0.76 0.7 0.45 psy fill
+gsave fuji clip
+  % snow: down to a ragged line, with runs reaching further down the ridges
+  cream newpath 0.50 0.40 P moveto 0.76 0.40 P lineto
+  0 1 24 { /i exch def 0.70 i 24 div 0.16 mul sub
+    0.300 i 2 mod 0 eq { rr 0.022 mul neg } { rr 0.008 mul } ifelse add P lineto } for
+  closepath fill
 grestore
-fuji 0.06 0.08 0.18 setrgbcolor 0.7 setlinewidth stroke
 
-% ------------------------------------------------------ sea: seigaiha rows
-/seig { % x y r
-  /sr exch def /sy exch def /sx exch def
-  0 1 5 { /i exch def
-    newpath sx sy sr 1 i 6 div sub mul 0 180 arc closepath
-    i 2 mod 0 eq { 0.97 0.94 0.84 setrgbcolor }
-    { 0.50 i 0.03 mul add sy H div 1.6 mul add sx W div 0.12 mul add dup floor sub 0.70 0.62 sethsbcolor } ifelse fill
-  } for } def
-/sea { % ytop -- rows from ytop down, small and far to big and near
-  /sy exch def /sr 9 0.19 H mul sy sub 9 0.55 mul div 1.06 exch exp mul def
-  { sy -12 lt { exit } if
-    /off sy H div 70 mul cvi 2 mod sr mul def
-    off neg sr 2 mul W sr add { sy sr seig } for
-    /sy sy sr 0.55 mul sub def /sr sr 1.06 mul def } loop } def
-0.19 H mul sea
-
-% ---------------------------------------------------------------- waves
-% each curl is placed by its spiral centre: cx cy R phi depth sign, where
-% phi is the angle from the centre to the base (kept off the page)
-/curlat { 8 dict begin
-  /sg exch def /dp exch def /phi exch def /R exch def /cy exch def /cx exch def
-  cx phi cos R mul add cy phi sin R mul add phi 90 sg mul add R dp sg kw-curl
+% ---------------------------------------------------------------- swells
+% a swell: cream under a top curve, inked along it, with rows of streaks
+/dash { % x0 y0 x1 y1 w -> a pointed streak, widest near its far end
+  6 dict begin /w exch def /y1 exch def /x1 exch def /y0 exch def /x0 exch def
+  /a y1 y0 sub x1 x0 sub atan def /l x1 x0 sub dup mul y1 y0 sub dup mul add sqrt def
+  gsave x0 y0 translate a rotate
+  newpath 0 0 moveto l 0.55 mul w l 0.92 mul w l 0 curveto
+  l 0.92 mul w -0.7 mul l 0.55 mul w -0.7 mul 0 0 curveto closepath fill
+  grestore end } def
+/swell { % [x0 y0 x1 y1 x2 y2 x3 y3] rows
+  12 dict begin /rows exch def /bz exch def
+  /pt { bz aload pop 9 -1 roll kw-bez P } def      % t -> x y in points
+  newpath 0 pt moveto 1 1 40 { 40 div pt lineto } for
+  bz 6 get -0.05 P lineto bz 0 get -0.05 P lineto closepath cream fill
+  1 1 rows { /r exch def
+    r 3 mod 1 eq { 0.70 0.82 0.86 r 0.37 mul frac 0.4 mul 0.45 add 0.40 0.95 }
+      { 0.13 0.27 0.48 r 0.29 mul frac 0.35 mul 0.60 add 0.80 0.50 } ifelse psy
+    /t0 rr 0.15 mul def
+    { t0 0.97 gt { exit } if
+      /t1 t0 0.30 add rr 0.25 mul add 1 min def
+      /dy r 10 mul rr 5 mul add def
+      t0 pt dy sub t1 pt dy sub 2.5 r 0.5 mul add rr 2 mul add dash
+      /t0 t1 0.03 add rr 0.10 mul add def } loop } for
+  newpath 0 pt moveto 1 1 40 { 40 div pt lineto } for ink 0.8 setlinewidth stroke
   end } def
-% far right wave (mid ground), then the great wave, then the foreground
-0.90 0.20 P 0.30 H mul -40 4 1 curlat
-% Droste: inside the cave, the wave again, smaller and turned
-/kw-fdecay 0.34 def /kw-fturn 390 def /kw-fturnk 0.55 def /kw-fthick 0.66 def
-/kw-fkids [ 0.28 0.05 0.90 { } for ] def
-% each copy sits in the previous one's cave, turned so its foot hides
-% behind the wall it grows from
-/Dx where { pop } { /Dx 0.39 def /Dy 0.53 def /Drot -60 def /Ds 0.25 def } ifelse
-/droste { % level
-  dup 0 gt {
-    gsave Dx W mul Dy H mul translate Drot rotate Ds dup scale
-      0.42 W mul neg 0.45 H mul neg translate        % the main wave's frame
-      dup 1 sub droste                                % deeper copies first
-      0.42 0.45 P 520 -80 4 -1 curlat
-    grestore
-  } if pop } def
-/kw-framp 120 def
-2 droste
-/kw-framp 0 def
-% the great wave: its spiral starts below the page and rises out of the sea
-/kw-fthick 0.66 def /kw-framp 0 def /kw-fturn 390 def /kw-fturnk 0.55 def
-/kw-fdecay 0.34 def
-/kw-fkids [ 0.28 0.025 0.90 { } for ] def
-0.42 0.45 P 520 -80 5 -1 curlat
-/kw-fdecay 0.26 def
-% spray: the crest flings off tiny waves of its own
-/kw-fturn 300 def /kw-fthick 0.5 def /kw-fturnk 0.6 def /kw-fkids [0.35 0.55 0.75] def
-/sea-fcolor /kw-fcolor load def
-/kw-fcolor { pop pop dup 0 eq { pop 0.98 0.96 0.88 setrgbcolor }
-  { 2 mod 1 eq { 0.62 0.80 0.88 } { 0.36 0.52 0.82 } ifelse setrgbcolor } ifelse } def
-0.30 0.40 P 0.40 W mul 0.58 H mul screct
-<< /Mark { /sa exch def /ss exch def /sy exch def /sx exch def
-           sx sy sa 360 mul ss 1 1 kw-curl }
-   /Count 60 /Scale [3 9] /Rotate [0 1] /MinSpacing 18 /Seed rand 100000 mod
-   /Weight { /wy exch def /wx exch def                  % thickest off the curl's lip
-             1 wx 0.58 W mul sub abs W div 3.2 mul sub
-             wy 0.70 H mul sub abs H div 2.2 mul sub 0 max } >> scatter
-/kw-fcolor /sea-fcolor load def
-/kw-fthick 0.55 def /kw-framp 40 def /kw-fturn 330 def /kw-fturnk 0.62 def
-/kw-fkids [0.18 0.24 0.30 0.36 0.42 0.48 0.54 0.60 0.66 0.72 0.78 0.84] def
-0.13 H mul sea                                   % the near sea over its foot
-0.40 0.21 P 0.58 0.14 P 8 8 kw-boat
-0.22 0.12 P 95 -120 4 -1 curlat
-0.30 0.06 P 0.50 0.12 P 8 7 kw-boat
+
+% ----------------------------------------------------------------- boats
+% a long oshiokuri boat from bow (x0,y0) to stern (x1,y1), normalized, its
+% gunwale sagging by `sag` points, with rowers huddled toward the stern
+/boat { % x0 y0 x1 y1 sag depth rowers [hull rgb]
+  16 dict begin /hc exch def /nr exch def /bd exch def /sag exch def
+  /y1 exch def /x1 exch def /y0 exch def /x0 exch def
+  gsave x0 y0 P translate
+  y1 y0 sub H mul x1 x0 sub W mul atan rotate
+  x1 x0 lt { 1 -1 scale } if                        % keep the hull below
+  /l x1 x0 sub W mul dup mul y1 y0 sub H mul dup mul add sqrt def
+  /g { % u -> x y on the gunwale
+    /u exch def l u mul u 1 u sub mul 4 mul sag neg mul } def
+  % rowers: huddled dark backs with round heads, over the gunwale
+  0 1 nr 1 sub { /i exch def /u 0.64 i 0.30 mul nr div add rr 0.02 mul add def
+    u g bd 0.3 rr mul mul sub /ry exch def /rx exch def
+    newpath rx bd 0.9 mul sub ry moveto rx bd 1.1 mul sub ry bd 1.5 mul add
+      rx bd 0.9 mul add ry bd 1.7 mul add rx bd 1.1 mul add ry curveto
+    closepath 0.16 0.30 0.52 setrgbcolor fill
+    newpath rx bd 0.3 mul add ry bd 1.25 mul add bd 0.30 mul 0 360 arc
+    gsave 0.97 0.88 0.80 setrgbcolor fill grestore ink 0.3 setlinewidth stroke
+  } for
+  % hull: gunwale above, a deeper keel curve below
+  newpath 0 g moveto 1 1 20 { 20 div g lineto } for
+  l 0.90 mul sag neg bd 1.4 mul sub l 0.10 mul sag neg bd 1.4 mul sub 0 0 curveto closepath
+  gsave hc aload pop setrgbcolor fill grestore ink 0.6 setlinewidth stroke
+  newpath 0.03 g moveto 1 1 20 { 20 div 0.94 mul 0.03 add g bd 0.35 mul sub lineto } for
+  0.4 setlinewidth stroke
+  grestore end } def
+
+% ------------------------------------------------------------- the wave
+% fingers: head (hx,hy) to foot (fx,fy), bowed by (bx,by), widths w0 w1,
+% all normalized; claws burst from the head, pointing back up the finger
+/claws 4 def /clawlen 0.06 def /clawdepth 2 def
+/pale { 0.72 0.84 0.87 setrgbcolor } def
+/cluster { % x y out r -- claws fanning out around heading `out`, r out from (x,y)
+  8 dict begin /cr exch def /out exch def /cy exch def /cx exch def
+  0 1 claws 1 sub { /c exch def
+    /an out claws 1 sub 2 div c sub 30 mul add 20 add rr 16 mul add def
+    cx W mul an cos cr mul add cy H mul an sin cr mul add
+    an clawlen W mul rr 0.5 mul 0.75 add mul clawdepth 1 kw-talon } for
+  end } def
+/fing { % hx hy fx fy bx by w0 w1
+  12 dict begin
+  /w1 exch W mul def /w0 exch W mul def /by exch def /bx exch def
+  /fy exch def /fx exch def /hy exch def /hx exch def
+  hx hy P
+  hx fx hx sub 0.33 mul add bx add hy fy hy sub 0.33 mul add by add P
+  hx fx hx sub 0.66 mul add bx add hy fy hy sub 0.66 mul add by add P
+  /out hy fy sub H mul hx fx sub W mul atan def
+  pale newpath hx W mul out cos w0 0.5 mul mul add hy H mul out sin w0 0.5 mul mul add
+    w0 0.55 mul 0 360 arc fill
+  /fi fi 1 add store
+  fx fy P w0 w1 kw-finger
+  % the claws: fan out from the head, opposite the finger's run
+  hx hy out w0 0.2 mul cluster
+  end } def
+/poly { % [x y ...] -> path (normalized)
+  newpath dup 0 get exch dup 1 get exch 3 1 roll P moveto
+  1 1 2 index length 2 idiv 1 sub { 2 mul 1 index exch 2 copy get 3 1 roll 1 add get P lineto } for
+  pop closepath } def
+
+/incave { % the frame of the smaller wave in a great wave's cave
+  0.565 0.50 P translate -12 rotate 0.27 dup scale 0.38 0.918 P neg exch neg exch translate } def
+/greatwave { % level -- level > 0 puts a smaller great wave in the cave, which
+              % puts one in its own cave, and so on
+  dup 0 gt { gsave incave dup 1 sub greatwave grestore } if pop
+  % body: cream, inked along its back
+  newpath -0.3 -0.3 P moveto -0.3 0.60 P lineto -0.01 0.655 P lineto
+  0.10 0.71 P 0.22 0.86 P 0.38 0.918 P curveto
+  0.45 0.90 P 0.50 0.84 P 0.52 0.79 P curveto
+  0.50 0.70 P lineto 0.46 0.62 P lineto
+  0.38 0.58 P 0.38 0.47 P 0.42 0.39 P curveto
+  0.46 0.33 P 0.50 0.28 P 0.53 0.24 P curveto 0.53 -0.3 P lineto closepath cream fill
+  newpath -0.3 0.60 P moveto -0.01 0.655 P lineto 0.10 0.71 P 0.22 0.86 P 0.38 0.918 P curveto
+  0.45 0.90 P 0.50 0.84 P 0.52 0.79 P curveto ink 1.2 setlinewidth stroke
+  % the lower fan, across the wave's back, on a dark ground
+  [0.02 0.47 0.20 0.52 0.33 0.53 0.40 0.44 0.47 0.28 0.42 -0.3 -0.3 -0.3 -0.3 0.38] poly
+  kw-gdark fill
+  /claws 5 def /clawlen 0.068 def
+  [ [-0.02 0.47 0.00 0.0] [0.020 0.505 0.06 0.05] [0.058 0.535 0.14 0.10] [0.098 0.556 0.22 0.20]
+    [0.142 0.570 0.28 0.26] [0.187 0.566 0.33 0.28] [0.232 0.576 0.37 0.30]
+    [0.277 0.573 0.40 0.32] [0.318 0.566 0.42 0.34] ]
+  { aload pop 0.03 -0.07 0.056 0.035 fing } forall
+  % the upper fan on the face
+  [0.26 0.70 0.43 0.76 0.47 0.70 0.395 0.62 0.385 0.50 0.42 0.40 0.47 0.30 0.40 0.36 0.36 0.52 0.30 0.64] poly
+  kw-gdark fill
+  /claws 4 def /clawlen 0.06 def
+  [ [0.236 0.725 0.30 0.60] [0.268 0.778 0.33 0.56] [0.302 0.803 0.36 0.50]
+    [0.337 0.815 0.39 0.37] [0.371 0.808 0.41 0.34] [0.403 0.788 0.44 0.32]
+    [0.432 0.758 0.45 0.32] [0.458 0.718 0.46 0.31] [0.478 0.672 0.47 0.30] ]
+  { aload pop -0.05 0.01 0.058 0.035 fing } forall
+  % the crest: one giant claw, made of claws, curling over the cave
+  /kw-tturn 120 def /kw-tbend 1.3 def /kw-tthick 0.24 def /kw-tjit 0.35 def
+  /kw-tkids { dup 4 ge
+    { pop [ [0.06 65 0.30] [0.16 58 0.34] [0.26 52 0.36] [0.36 48 0.38] [0.46 44 0.38]
+        [0.56 40 0.38] [0.66 34 0.36] [0.75 28 0.36] [0.84 18 0.34] [0.92 6 0.32]
+        [0.99 -10 0.30] ] }
+    { 3 ge { [ [0.10 70 0.40] [0.30 60 0.44] [0.50 48 0.48] [0.70 34 0.46] [0.90 15 0.40] ] }
+           { [ [0.30 60 0.42] [0.55 48 0.46] [0.80 30 0.40] ] } ifelse } ifelse } def
+  /kw-tbare 3 def /kw-tbarew 0 def
+  0.37 0.835 P -8 0.31 W mul 4 1 kw-talon
+  /kw-tjit 0.2 def /kw-tbare 99 def
+  /kw-tturn 230 def /kw-tbend 2.4 def /kw-tthick 0.26 def
+  /kw-tkids [ [0.35 55 0.42] [0.60 45 0.45] [0.78 30 0.38] ] def
+  % spray falling into the cave
+  cream
+  500 { /sx 0.38 rr 0.24 mul add def /sy 0.27 rr 0.40 mul add def
+    sx 0.40 gt sy 0.45 sub abs 0.20 lt and {
+      newpath sx sy P rr 1.4 mul 0.4 add 0 360 arc fill } if } repeat
+} def
+
+% ------------------------------------------------------------- compose
+/tanhull [0.93 0.82 0.64] def /pinkhull [0.93 0.74 0.62] def
+% the cave's waves sit behind everything in front of the cave
+Kdroste 0 gt { gsave incave Kdroste 1 sub greatwave grestore } if
+[0.47 0.262 0.62 0.268 0.80 0.35 1.01 0.50] 4 swell
+[0.62 0.22 0.80 0.30 0.92 0.44 1.01 0.575] 8 swell
+0.553 0.300 0.890 0.472 30 12 9 tanhull boat
+0 greatwave
+0.03 0.47 0.22 0.33 6 12 5 tanhull boat
+% the foreground wave: the great wave again, smaller
+gsave 0.345 0.42 P translate 0.55 dup scale 0.38 0.918 P neg exch neg exch translate
+  0 greatwave grestore
+% its back: a cream hump, Fuji's shape, its crest bursting into claws
+newpath -0.05 0.20 P moveto 0.12 0.28 P 0.28 0.40 P 0.345 0.432 P curveto
+  0.40 0.40 P 0.44 0.33 P 0.47 0.28 P curveto 0.40 0.17 P lineto 0.20 0.13 P lineto -0.05 0.10 P lineto
+  closepath cream fill
+newpath -0.05 0.20 P moveto 0.12 0.28 P 0.28 0.40 P 0.345 0.432 P curveto ink 1 setlinewidth stroke
+% dark fingers only low down, then the crest's claws along the hump
+[ [0.02 0.17 0.00 -0.10] [0.08 0.16 0.10 -0.10] [0.14 0.15 0.20 -0.10] [0.20 0.14 0.28 -0.10]
+  [0.26 0.13 0.34 -0.10] ]
+{ aload pop 0.02 -0.03 0.055 0.04 fing } forall
+/claws 4 def /clawlen 0.045 def
+[ [0.08 0.24 100] [0.12 0.265 98] [0.16 0.29 95] [0.19 0.31 92] [0.22 0.34 90] [0.25 0.37 85]
+  [0.28 0.395 80] [0.31 0.415 75] [0.34 0.425 65] [0.37 0.41 50] [0.39 0.39 40] [0.41 0.37 35]
+  [0.43 0.34 25] [0.45 0.31 15] [0.46 0.28 10]
+  [0.14 0.21 85] [0.19 0.235 80] [0.24 0.26 75] [0.29 0.29 65] [0.34 0.32 55] [0.38 0.30 45]
+  [0.42 0.27 35] [0.22 0.18 70] [0.28 0.21 60] [0.34 0.24 50] [0.39 0.22 40] [0.31 0.16 55] ]
+{ aload pop 0 cluster } forall
+[0.36 0.05 0.50 0.215 0.80 0.21 1.01 0.30] 5 swell
+0.41 0.245 0.765 0.090 10 13 9 pinkhull boat
+[0.31 -0.08 0.50 0.05 0.80 0.05 1.01 0.14] 4 swell
 
 showpage
