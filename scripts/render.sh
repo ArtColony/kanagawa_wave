@@ -62,13 +62,18 @@ for piece in "${files[@]}"; do
   name="$(basename "$piece" .ps)"
   page="$(awk '/^%%BoundingBox:/ { print $4-$2 "x" $5-$3; exit }' "$piece")"
   page="${page:-612x792}"
-  # -D values go in a prelude that then runs the piece
-  prelude="$tmp/$name.ps"
-  {
-    echo "%!PS-Adobe-3.0"
-    for d in ${defs[@]+"${defs[@]}"}; do echo "/${d%%=*} ${d#*=} def"; done
-    echo "($piece) run"
-  } > "$prelude"
+  # -D values go in a prelude that then runs the piece; without them the piece
+  # runs directly, so error reports give its own line numbers (pscat reports
+  # the top-level file's line: PSCatLabs/pscat#1043)
+  prelude="$piece"
+  if [ ${#defs[@]} -gt 0 ]; then
+    prelude="$tmp/$name.ps"
+    {
+      echo "%!PS-Adobe-3.0"
+      for d in "${defs[@]}"; do echo "/${d%%=*} ${d#*=} def"; done
+      echo "($piece) run"
+    } > "$prelude"
+  fi
   if [ ${#sweep[@]} -gt 0 ]; then
     # frames land as <name>-frame-NNN.png
     target="$out/$name-sweep.png"
