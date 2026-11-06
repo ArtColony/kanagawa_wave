@@ -1,0 +1,169 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 0 0 720 486
+%%Title: great_wave -- after Hokusai's Great Wave off Kanagawa (c. 1831)
+% A procedural homage: Bezier wave bodies, concentric streaks, and
+% self-similar foam claws (kw-claw) along the curling lip.
+%
+%   scripts/render.sh gallery/great_wave.ps
+%   scripts/render.sh -D Seed=4 gallery/great_wave.ps
+
+/Seed where { pop } { /Seed 7 def } ifelse
+Seed srand
+
+(lib/artkit.ps) run
+(lib/kw_wave.ps) run
+
+/W 720 def /H 486 def
+/P { H mul exch W mul exch } bind def           % fx fy -> x y (fractions of the page)
+/Bz { /bz-s exch def                           % [8 fractions] -> [8 points]
+  [ 0 2 6 { dup bz-s exch get exch 1 add bz-s exch get P } for ] } bind def
+
+% palette: Prussian blue woodblock, one warm accent (the boats)
+/paper  [0.92 0.87 0.75] def
+/dusk   [0.72 0.66 0.54] def
+/prus   [0.10 0.21 0.38] def
+/mid    [0.24 0.42 0.60] def
+/pale   [0.62 0.75 0.81] def
+/fujic  [0.36 0.42 0.52] def
+
+% ---------------------------------------------------------------- sky
+paper kw-rgb clippath fill
+0 1 59 { /i exch def                            % darkening band at the top
+  paper dusk i 59 div 1.6 exp mix3 setrgbcolor
+  0 H 0.62 mul H 0.38 mul i 60 div mul add W H 0.38 mul 60 div 1 add rectfill
+} for
+
+% ---------------------------------------------------------------- Fuji
+/fuji {
+  newpath 0.555 0.165 P moveto
+  0.605 0.19 P 0.64 0.29 P 0.657 0.318 P curveto
+  0.677 0.318 P lineto
+  0.695 0.29 P 0.725 0.19 P 0.785 0.165 P curveto closepath } def
+gsave fuji fujic kw-rgb fill
+  fuji clip
+  newpath 0.5 0.4 P moveto 0.6 0.255 P lineto      % snow cap, jagged lower edge
+  0 1 16 { /i exch def
+    0.62 i 16 div 0.095 mul add
+    i 2 mod 0 eq { 0.262 } { 0.232 } ifelse 0.004 jit add P lineto } for
+  0.8 0.255 P lineto 0.8 0.4 P lineto closepath
+  kw-foam kw-rgb fill
+grestore
+fuji kw-ink kw-rgb kw-inkw setlinewidth stroke
+
+% ---------------------------------------------------------------- sea plain
+mid kw-rgb 0 0 W 0.17 H mul rectfill
+pale kw-rgb 0.7 setlinewidth
+1 1 9 { /i exch def
+  newpath 0 0.17 i 0.017 mul sub P moveto
+  0 1 24 { /x exch def
+    x 24 div 0.17 i 0.017 mul sub x 3 mod 0 eq { 0.004 } { 0 } ifelse add P lineto } for
+  stroke } for
+
+% ------------------------------------------- a wave body: streaks, rim, claws
+% body: proc building the closed body path
+% edge: proc building the open crest edge (the side that carries foam)
+% hx hy: the point the streaks contract towards (inside the hollow)
+/streaks { % body edge hx hy n
+  16 dict begin /n exch def /hy exch def /hx exch def /edge exch def /body exch def
+  gsave
+  body prus kw-rgb gsave fill grestore clip
+  1 1 n { /i exch def
+    /s 1 i n 1 add div 0.72 mul sub def
+    matrix currentmatrix
+    hx hy translate s s scale hx neg hy neg translate
+    newpath edge
+    setmatrix
+    i 2 mod 0 eq { mid } { pale } ifelse kw-rgb
+    i 2 mod 0 eq { 3.2 } { 1.1 } ifelse s mul setlinewidth stroke
+  } for
+  % foam rim just inside the crest edge, laced with blue holes
+  newpath edge kw-foam kw-rgb 15 setlinewidth stroke
+  newpath edge
+  7 { /a exch def /y exch def /x exch def
+      gsave newpath x a 90 sub cos 3.5 mul add y a 90 sub sin 3.5 mul add
+      1.1 frnd 1.2 mul add 0 360 arc pale kw-rgb fill grestore } alongpath
+  grestore
+  body kw-ink kw-rgb kw-inkw setlinewidth stroke
+  end
+} def
+
+% ------------------------------------------------- right-hand wave (mid ground)
+/rlip [0.97 0.30 0.93 0.35 0.87 0.34 0.845 0.27] Bz def
+/redge { 1.0 0.25 P moveto 0.99 0.28 P 0.98 0.29 P 0.97 0.30 P curveto rlip kw-bezcont } def
+/rbody { newpath redge 0.83 0.23 P 0.87 0.16 P 0.80 0.06 P curveto
+         0.79 0.0 P lineto 1.0 0.0 P lineto closepath } def
+/rbody load /redge load 0.91 0.14 P 7 streaks
+/kw-grow 0.6 def
+rlip 0.1 1.0 6 18 6 -6 1 0.3 kw-crest
+
+0.79 0.07 P 0.99 0.13 P 8 6 kw-boat
+
+% ------------------------------------------------------------- the great wave
+/back [0.0 0.30 0.03 0.62 0.12 0.86 0.36 0.90] Bz def   % rising back
+/lip  [0.36 0.90 0.53 0.92 0.63 0.81 0.645 0.67] Bz def % curl, crest to tip
+/gedge { back kw-bezpath lip kw-bezcont } def
+/gbody { newpath gedge
+  0.62 0.62 P 0.54 0.67 P 0.49 0.60 P curveto              % underside of the lip
+  0.42 0.50 P 0.41 0.30 P 0.54 0.16 P curveto              % the hollow
+  0.62 0.09 P 0.70 0.07 P 0.72 0.0 P curveto
+  0.0 0.0 P lineto closepath } def
+/gbody load /gedge load 0.53 0.50 P 21 streaks
+
+% streaks down the hollow face, following its curve back into the body
+gsave gbody clip
+  1 1 9 { /i exch def
+    matrix currentmatrix i -9 mul i 2.5 mul translate
+    newpath 0.49 0.60 P moveto 0.42 0.50 P 0.41 0.30 P 0.54 0.16 P curveto
+    0.62 0.09 P 0.70 0.07 P 0.72 0.0 P curveto
+    setmatrix
+    i 2 mod 0 eq { mid } { pale } ifelse kw-rgb
+    i 2 mod 0 eq { 2.6 } { 0.9 } ifelse 1 i 14 div sub mul setlinewidth stroke
+  } for
+grestore
+
+% foam along the underside of the lip
+gsave newpath 0.645 0.67 P moveto 0.62 0.62 P 0.54 0.67 P 0.49 0.60 P curveto
+  kw-foam kw-rgb 5 setlinewidth stroke grestore
+
+% the claws: big ones along the curl, smaller ones up the back
+/kw-grow 0 def /kw-lean 30 def
+back 0.55 0.98 10 26 7 -5.5 1 0.3 kw-crest
+/kw-grow 0.5 def /kw-lean 48 def
+lip 0.0 0.94 14 64 12 -3.6 2 0.3 kw-crest
+/kw-lean 22 def
+
+% boat in the trough at the foot of the hollow
+0.40 0.26 P 0.63 0.15 P 9 8 kw-boat
+
+% --------------------------------------------- foreground wave (lower left)
+/flip [0.10 0.27 0.20 0.33 0.29 0.31 0.33 0.22] Bz def
+/fedge { 0.0 0.17 P moveto 0.04 0.22 P 0.07 0.26 P 0.10 0.27 P curveto flip kw-bezcont } def
+/fbody { newpath fedge 0.30 0.19 P 0.27 0.12 P 0.34 0.04 P curveto
+         0.36 0.0 P lineto 0.0 0.0 P lineto closepath } def
+/fbody load /fedge load 0.30 0.12 P 7 streaks
+/kw-grow 0.7 def
+flip 0.05 1.0 8 26 8 -5 1 0.3 kw-crest
+/kw-grow 0 def
+0.02 0.09 P 0.24 0.17 P 9 7 kw-boat
+
+% ------------------------------------------------------------------- spray
+0.30 0.55 P 0.42 W mul 0.44 H mul screct
+<< /Mark { /sa exch def /ss exch def /sy exch def /sx exch def
+           newpath sx sy ss 0 360 arc kw-foam kw-rgb fill }
+   /Count 220 /Scale [0.6 2.4] /MinSpacing 6 /Seed rand 100000 mod
+   /Weight { /wy exch def /wx exch def                % denser near the lip
+             1 wx 0.60 W mul sub abs W div 3 mul sub
+             wy 0.80 H mul sub abs H div 2 mul sub 0 max } >> scatter
+
+% --------------------------------------------------------------- cartouche
+gsave
+  0.025 0.80 P translate
+  paper 1.04 shade setrgbcolor 0 0 92 72 rectfill
+  kw-ink kw-rgb 0.8 setlinewidth 0 0 92 72 rectstroke 3 3 86 66 rectstroke
+  /Times-Bold findfont 11 scalefont setfont
+  (THE GREAT) 46 50 showctr (WAVE) 46 36 showctr
+  /Times-Italic findfont 8 scalefont setfont
+  (after Hokusai) 46 16 showctr
+grestore
+
+showpage

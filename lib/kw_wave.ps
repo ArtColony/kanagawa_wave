@@ -1,0 +1,165 @@
+%!PS-Adobe-3.0
+% kw_wave.ps -- procedures for Great-Wave-style seascapes.
+%
+%   (lib/kw_wave.ps) run          from the repo root, after setting options
+%
+% Every name defined here starts with kw- so it cannot collide with
+% pscat's built-in lib/ (artkit and friends) or with a piece's own names.
+%
+% Options (define before loading to override; kw-default keeps them):
+%   /kw-ink     [r g b]  outline colour (Prussian-blue black)
+%   /kw-foam    [r g b]  foam / snow colour
+%   /kw-inkw    real     outline width in points
+%   /kw-boatc   [r g b]  boat hull colour
+%   /kw-lean    real     kw-crest: claw lean off the tangent, degrees (22)
+%   /kw-grow    real     kw-crest: size ramp along the crest, 0 = even (0)
+% kw-lean and kw-grow are read when kw-crest runs, so a piece may re-def
+% them between calls.
+%
+% Procedures:
+%   /name value kw-default            def unless already defined
+%   [r g b] kw-rgb                    setrgbcolor from an array
+%   bez t kw-bezat     -> x y         point on a cubic Bezier, bez = [x0 y0 x1 y1 x2 y2 x3 y3]
+%   bez t kw-bezdir    -> deg         tangent heading at t
+%   bez kw-bezpath                    moveto+curveto the Bezier onto the current path
+%   bez kw-bezcont                    curveto from the current point (bez's p0 ignored)
+%   x y heading len width curl depth kw-claw
+%                                     a tapered, curling foam finger; at depth > 0 it
+%                                     sprouts smaller fingers from its outer edge, so one
+%                                     call grows the self-similar "claw" of the crest.
+%                                     curl is degrees of turn per point of length
+%                                     (negative = clockwise).
+%   bez t0 t1 n len width curl depth jitter kw-crest
+%                                     n claws spaced along bez from t0 to t1, each
+%                                     leaning off the outer side of the curve; jitter
+%                                     (0..1) varies length and curl (uses rand).
+%   x0 y0 x1 y1 width rowers kw-boat  a slim oshiokuri-style boat with a row of
+%                                     crouched rowers, from stern (x0,y0) to bow.
+
+/kw-default { 1 index where { pop pop pop } { def } ifelse } bind def
+
+/kw-ink  [0.07 0.11 0.20] kw-default
+/kw-foam [0.96 0.94 0.87] kw-default
+/kw-inkw 0.6 kw-default
+/kw-boatc [0.86 0.77 0.55] kw-default
+/kw-lean 22 kw-default      % kw-crest: degrees a claw leans off the curve's tangent
+/kw-grow 0 kw-default       % kw-crest: claw size ramp from t0 to t1 (0 = even)
+
+/kw-rgb { aload pop setrgbcolor } bind def
+
+/kw-bezat { % bez t -> x y
+  exch aload pop 9 -1 roll
+  20 dict begin
+  /t exch def /y3 exch def /x3 exch def /y2 exch def /x2 exch def
+  /y1 exch def /x1 exch def /y0 exch def /x0 exch def
+  /u 1 t sub def
+  /b0 u u mul u mul def /b1 3 u mul u mul t mul def
+  /b2 3 u mul t mul t mul def /b3 t t mul t mul def
+  x0 b0 mul x1 b1 mul add x2 b2 mul add x3 b3 mul add
+  y0 b0 mul y1 b1 mul add y2 b2 mul add y3 b3 mul add
+  end
+} bind def
+
+/kw-bezdir { % bez t -> heading (degrees)
+  exch aload pop 9 -1 roll
+  20 dict begin
+  /t exch def /y3 exch def /x3 exch def /y2 exch def /x2 exch def
+  /y1 exch def /x1 exch def /y0 exch def /x0 exch def
+  /u 1 t sub def
+  /a 3 u mul u mul def /b 6 u mul t mul def /c 3 t mul t mul def
+  /dy y1 y0 sub a mul y2 y1 sub b mul add y3 y2 sub c mul add def
+  /dx x1 x0 sub a mul x2 x1 sub b mul add x3 x2 sub c mul add def
+  dx abs dy abs add 1e-9 lt { 0 } { dy dx atan } ifelse
+  end
+} bind def
+
+/kw-bezpath { aload pop 8 -2 roll moveto curveto } bind def
+/kw-bezcont { aload pop 8 -2 roll pop pop curveto } bind def
+
+/kw-claw { % x y heading len width curl depth
+  16 dict begin
+  /d exch def /k exch def /w exch def /L exch def /h exch def /y exch def /x exch def
+  /n 22 def /ds L n div def
+  /px n 1 add array def /py n 1 add array def /ph n 1 add array def
+  /cx x def /cy y def /ch h def
+  0 1 n { /i exch def
+    px i cx put py i cy put ph i ch put
+    /cx cx ch cos ds mul add def /cy cy ch sin ds mul add def
+    /ch ch k ds mul add def
+  } for
+  /half { % i -> half-width at sample i
+    n div 1 exch sub 1.5 exp w 2 div mul 0.12 add } def
+  newpath
+  0 1 n { /i exch def /r i half def
+    px i get ph i get 90 add cos r mul add
+    py i get ph i get 90 add sin r mul add
+    i 0 eq { moveto } { lineto } ifelse } for
+  n -1 0 { /i exch def /r i half def
+    px i get ph i get 90 sub cos r mul add
+    py i get ph i get 90 sub sin r mul add lineto } for
+  closepath
+  gsave kw-foam kw-rgb fill grestore
+  kw-ink kw-rgb kw-inkw setlinewidth 1 setlinejoin stroke
+  d 0 gt {
+    % sprout from the outer edge: the side the finger turns away from
+    /side k 0 lt { 1 } { -1 } ifelse def
+    [0.32 0.58 0.82] { /f exch def
+      /i n f mul cvi def
+      px i get ph i get 90 side mul add cos i half mul add
+      py i get ph i get 90 side mul add sin i half mul add
+      ph i get 38 side mul add
+      L 0.42 mul 1 f 0.35 mul sub mul
+      w 0.48 mul 1 f 0.4 mul sub mul
+      k 1.7 mul
+      d 1 sub kw-claw
+    } forall
+  } if
+  end
+} bind def
+
+/kw-crest { % bez t0 t1 n len width curl depth jitter
+  16 dict begin
+  /j exch def /d exch def /k exch def /w exch def /L exch def /n exch def
+  /t1 exch def /t0 exch def /bz exch def
+  /side k 0 lt { 1 } { -1 } ifelse def
+  /var { 1 j rand 1000 mod 500 sub 500 div mul add mul } def  % v -> v*(1 +- j)
+  0 1 n 1 sub { /i exch def
+    /u i n 1 sub 1 max div def
+    /t t0 t1 t0 sub u mul add def
+    /g 1 kw-grow 2 div sub kw-grow u mul add def            % size grows towards t1
+    bz t kw-bezat
+    bz t kw-bezdir kw-lean side mul add
+    L g mul var w g mul k var d kw-claw
+  } for
+  end
+} bind def
+
+/kw-boat { % x0 y0 x1 y1 width rowers
+  16 dict begin
+  /m exch def /w exch def /y1 exch def /x1 exch def /y0 exch def /x0 exch def
+  /a y1 y0 sub x1 x0 sub atan def
+  /len x1 x0 sub dup mul y1 y0 sub dup mul add sqrt def
+  gsave
+  x0 y0 translate a rotate
+  % rowers first, so the hull's gunwale overlaps them
+  0 1 m 1 sub { /i exch def
+    /rx len 0.18 mul len 0.62 mul i m 1 sub 1 max div mul add def
+    newpath rx w 0.55 mul moveto rx 0.5 add w 1.8 mul rx 4.5 add w 1.8 mul rx 5 add w 0.55 mul curveto closepath
+    gsave kw-foam kw-rgb fill grestore kw-ink kw-rgb kw-inkw setlinewidth stroke
+    newpath rx 2.4 add w 1.75 mul 1.7 0 360 arc kw-ink kw-rgb fill
+  } for
+  newpath
+  0 w 0.6 mul moveto
+  len 0.08 mul 0 lineto
+  len 0.88 mul 0 lineto
+  len w 1.1 mul lineto
+  len 0.86 mul w 0.7 mul lineto
+  len 0.06 mul w 0.75 mul lineto
+  closepath
+  gsave kw-boatc kw-rgb fill grestore
+  kw-ink kw-rgb kw-inkw setlinewidth 1 setlinejoin stroke
+  % gunwale line
+  newpath len 0.07 mul w 0.45 mul moveto len 0.87 mul w 0.5 mul lineto stroke
+  grestore
+  end
+} bind def

@@ -1,0 +1,6 @@
+# Render output. Pick the images worth keeping into gallery/previews/ by hand.
+# scripts/render.sh writes to $KW_RENDERS instead when set (e.g. an external drive).
+renders/
+
+.DS_Store
+.playwright-mcp/
